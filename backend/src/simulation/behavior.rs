@@ -175,35 +175,42 @@ impl BehaviorTree {
     }
     
     pub async fn execute(&self, world: &World, tick: u64) -> Result<Action> {
-        debug!("Executing behavior tree for humanoid");
-        
+        // Execute the behavior tree and extract the action
         let result = self.execute_node(&self.root, world, tick).await?;
         
+        // Convert BehaviorResult to Action (simplified)
         match result {
             BehaviorResult::Success => {
-                // Extract action from successful execution
+                // Extract action from the tree
                 if let Some(action) = self.extract_action(&self.root) {
                     Ok(action)
                 } else {
                     Ok(Action::Idle)
                 }
             }
-            BehaviorResult::Failure => {
-                // Fallback to idle behavior
-                Ok(Action::Idle)
-            }
-            BehaviorResult::Running => {
-                // Continue with current action or idle
-                Ok(Action::Idle)
-            }
+            BehaviorResult::Failure => Ok(Action::Idle),
+            BehaviorResult::Running => Ok(Action::Idle),
         }
+    }
+    
+    pub async fn execute_simple(&self) -> Result<BehaviorResult> {
+        // Simple execution that returns BehaviorResult directly
+        let world_config = crate::config::WorldConfig {
+            world_size: (100, 100),
+            terrain_seed: 42,
+            initial_population: 10,
+            resource_density: 0.3,
+            weather_variability: 0.1,
+        };
+        let world = super::world::World::new(&world_config)?;
+        self.execute_node(&self.root, &world, 0).await
     }
     
     async fn execute_node(&self, node: &BehaviorNode, world: &World, tick: u64) -> Result<BehaviorResult> {
         match node {
             BehaviorNode::Sequence(children) => {
                 for child in children {
-                    let result = self.execute_node(child, world, tick).await?;
+                    let result = Box::pin(self.execute_node(child, world, tick)).await?;
                     if result == BehaviorResult::Failure {
                         return Ok(BehaviorResult::Failure);
                     }
@@ -212,7 +219,7 @@ impl BehaviorTree {
             }
             BehaviorNode::Selector(children) => {
                 for child in children {
-                    let result = self.execute_node(child, world, tick).await?;
+                    let result = Box::pin(self.execute_node(child, world, tick)).await?;
                     if result == BehaviorResult::Success {
                         return Ok(BehaviorResult::Success);
                     }
@@ -227,7 +234,7 @@ impl BehaviorTree {
                 Ok(if result { BehaviorResult::Success } else { BehaviorResult::Failure })
             }
             BehaviorNode::Decorator(child, decorator_type) => {
-                let child_result = self.execute_node(child, world, tick).await?;
+                let child_result = Box::pin(self.execute_node(child, world, tick)).await?;
                 self.apply_decorator(child_result, decorator_type)
             }
         }

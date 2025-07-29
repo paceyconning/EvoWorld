@@ -7,7 +7,7 @@ use rand::prelude::SliceRandom;
 use tracing::debug;
 use tracing::info;
 use std::collections::HashSet;
-use super::behavior::TechMilestone;
+use super::behavior::{TechMilestone, BehaviorResult};
 
 use super::terrain::Vec2Def;
 use super::behavior::{Action, BehaviorTree};

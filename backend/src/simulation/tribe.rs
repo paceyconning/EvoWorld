@@ -325,7 +325,8 @@ impl Tribe {
     }
     
     pub fn apply_decision(&mut self, decision: TribeDecision, world: &super::world::World, tick: u64) -> Result<()> {
-        debug!("Tribe {} applying decision: {:?}", self.name, decision);
+        // Store decision description before pattern matching
+        let decision_description = format!("Tribe decided to: {:?}", decision);
         
         match decision {
             TribeDecision::ExpandTerritory(direction, distance) => {
@@ -337,8 +338,8 @@ impl Tribe {
             TribeDecision::TradeWithTribe(tribe_id, items) => {
                 self.initiate_trade(tribe_id, items, tick)?;
             }
-            TribeDecision::DeclareWar(tribe_id, reason) => {
-                self.declare_war(tribe_id, reason, tick)?;
+            TribeDecision::DeclareWar(tribe_id, ref reason) => {
+                self.declare_war(tribe_id, reason.clone(), tick)?;
             }
             TribeDecision::DevelopTechnology(ref tech_type) => {
                 debug!("Tribe {} developing technology: {}", self.name, tech_type);
@@ -365,7 +366,7 @@ impl Tribe {
         // Record decision in history
         self.add_history_event(
             "decision",
-            &format!("Tribe decided to: {:?}", decision),
+            &decision_description,
             vec![],
             tick,
             0.5,

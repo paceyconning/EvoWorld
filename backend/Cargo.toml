@@ -51,10 +51,6 @@ criterion = "0.5"
 name = "evoworld-sim"
 path = "src/main.rs"
 
-[[bin]]
-name = "evoworld-analytics"
-path = "src/analytics.rs"
-
 [profile.release]
 opt-level = 3
 lto = true

@@ -545,10 +545,34 @@ impl Terrain {
 
             // Recalculate vegetation density based on new conditions
             let biome_type = tile.biome_type;
-            tile.vegetation_density = self.calculate_vegetation_density(biome_type, tile.fertility, tile.moisture);
+            let fertility = tile.fertility;
+            let moisture = tile.moisture;
+            // Calculate vegetation density without borrowing self
+            tile.vegetation_density = Self::calculate_vegetation_density_static(biome_type, fertility, moisture);
         }
 
         Ok(())
+    }
+    
+    fn calculate_vegetation_density_static(biome: BiomeType, fertility: f32, moisture: f32) -> f32 {
+        // Static version of calculate_vegetation_density to avoid borrowing conflicts
+        let base_density = match biome {
+            BiomeType::Forest => 0.8,
+            BiomeType::Jungle => 0.9,
+            BiomeType::Grassland => 0.6,
+            BiomeType::Swamp => 0.7,
+            BiomeType::Desert => 0.1,
+            BiomeType::Tundra => 0.3,
+            BiomeType::Arctic => 0.1,
+            BiomeType::Mountain => 0.4,
+            BiomeType::Ocean => 0.0,
+            BiomeType::Lake => 0.2,
+            BiomeType::River => 0.3,
+            BiomeType::Beach => 0.2,
+            BiomeType::Volcanic => 0.2,
+        };
+        
+        base_density * fertility * moisture
     }
     
     pub fn get_tile(&self, x: u32, y: u32) -> Option<&TerrainTile> {

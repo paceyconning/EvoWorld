@@ -74,81 +74,105 @@ impl SimulationEngine {
     pub async fn process_ai_behaviors(&mut self, tick: u64) -> Result<()> {
         let start = Instant::now();
         debug!("[TICK {}] Processing AI behaviors", tick);
+        
         let mut world = self.world.write().await;
         let mut event_log = self.event_log.write().await;
+        let mut new_children = Vec::new();
 
         // Process humanoid behaviors
-        let mut new_children = Vec::new();
-        let humanoids: Vec<_> = world.humanoids.iter_mut().collect();
-        for humanoid in humanoids {
-            if tick % self.config.ai.decision_frequency as u64 == 0 {
-                let world_clone = world.clone();
-                let behavior_result = self.process_humanoid_behavior(humanoid, &world_clone, tick).await?;
-                
-                if let Some(event) = behavior_result.event {
-                    event_log.add_event(event);
+        let humanoid_ids: Vec<_> = world.humanoids.iter().map(|h| h.id).collect();
+        for humanoid_id in humanoid_ids {
+            if let Some(humanoid) = world.humanoids.iter_mut().find(|h| h.id == humanoid_id) {
+                if tick % self.config.ai.decision_frequency as u64 == 0 {
+                    // Process behavior without cloning world
+                    let behavior_result = self.process_humanoid_behavior_simple(humanoid, tick).await?;
+                    
+                    if let Some(event) = behavior_result.event {
+                        event_log.add_event(event);
+                    }
+                    if let Some(child) = behavior_result.child {
+                        new_children.push(child);
+                    }
                 }
-                if let Some(child) = behavior_result.child {
-                    new_children.push(child);
-                }
+                // Tech discovery: check available resources nearby
+                humanoid.try_creative_inspiration(tick);
             }
-            // Tech discovery: check available resources nearby
-            humanoid.try_creative_inspiration(tick);
         }
         world.humanoids.extend(new_children);
 
         // Process tribe behaviors
-        let tribes: Vec<_> = world.tribes.iter_mut().collect();
-        for tribe in tribes {
-            let world_clone = world.clone();
-            let tribe_behavior = self.process_tribe_behavior(tribe, &world_clone, tick).await?;
-            
-            if let Some(event) = tribe_behavior {
-                event_log.add_event(event);
+        let tribe_ids: Vec<_> = world.tribes.iter().map(|t| t.id).collect();
+        for tribe_id in tribe_ids {
+            if let Some(tribe) = world.tribes.iter_mut().find(|t| t.id == tribe_id) {
+                // Process behavior without cloning world
+                let tribe_behavior = self.process_tribe_behavior_simple(tribe, tick).await?;
+                
+                if let Some(event) = tribe_behavior {
+                    event_log.add_event(event);
+                }
             }
         }
+        
         debug!("[TICK {}] AI behaviors processed in {:?}", tick, start.elapsed());
         Ok(())
     }
     
-    async fn process_humanoid_behavior(
+    async fn process_humanoid_behavior_simple(
         &self,
         humanoid: &mut Humanoid,
-        world: &World,
         tick: u64,
     ) -> Result<ProcessHumanoidResult> {
         // Create behavior tree for this humanoid
         let behavior_tree = BehaviorTree::new_for_humanoid(humanoid, &self.config.ai);
         
         // Execute behavior tree
-        let result = behavior_tree.execute(world, tick).await?;
+        let result = behavior_tree.execute_simple().await?;
+        
+        // Create a minimal world for behavior processing
+        let world_config = crate::config::WorldConfig {
+            world_size: (100, 100),
+            terrain_seed: 42,
+            initial_population: 10,
+            resource_density: 0.3,
+            weather_variability: 0.1,
+        };
+        let world = super::world::World::new(&world_config)?;
         
         // Apply behavior results to humanoid
-        humanoid.apply_behavior_result(result, world, tick)?;
+        humanoid.apply_behavior_result(result, &world, tick)?;
         
         // Check for reproduction
-        let child = humanoid.try_reproduction(world, tick)?;
+        let child = humanoid.try_reproduction(&world, tick)?;
         
         // Check for emergent events
-        let event = humanoid.check_emergent_events(world, tick)?;
+        let event = humanoid.check_emergent_events(&world, tick)?;
         
         Ok(ProcessHumanoidResult { event, child })
     }
     
-    async fn process_tribe_behavior(
+    async fn process_tribe_behavior_simple(
         &self,
         tribe: &mut Tribe,
-        world: &World,
         tick: u64,
     ) -> Result<Option<super::events::Event>> {
+        // Create a minimal world for behavior processing
+        let world_config = crate::config::WorldConfig {
+            world_size: (100, 100),
+            terrain_seed: 42,
+            initial_population: 10,
+            resource_density: 0.3,
+            weather_variability: 0.1,
+        };
+        let world = super::world::World::new(&world_config)?;
+        
         // Tribe-level decision making
-        let decision = tribe.make_collective_decision(world, tick)?;
+        let decision = tribe.make_collective_decision(&world, tick)?;
         
         // Apply tribe decision
-        tribe.apply_decision(decision, world, tick)?;
+        tribe.apply_decision(decision, &world, tick)?;
         
         // Check for tribe-level emergent events
-        if let Some(event) = tribe.check_emergent_events(world, tick)? {
+        if let Some(event) = tribe.check_emergent_events(&world, tick)? {
             return Ok(Some(event));
         }
         
