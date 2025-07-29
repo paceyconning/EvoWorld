@@ -20,7 +20,7 @@ use self::world::World;
 use self::events::EventLog;
 
 pub struct Simulation {
-    engine: SimulationEngine,
+    pub engine: SimulationEngine,
     world: Arc<RwLock<World>>,
     event_log: Arc<RwLock<EventLog>>,
     config: Config,

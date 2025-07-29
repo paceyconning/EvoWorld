@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use noise::{NoiseFn, Perlin};
 use glam::Vec2;
 use tracing::debug;
+use crate::config::WorldConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Terrain {
@@ -28,7 +29,7 @@ pub struct TerrainTile {
     pub structures: Vec<TerrainStructure>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum BiomeType {
     Ocean,
     Beach,
@@ -429,19 +430,17 @@ impl Terrain {
         for tile in &mut self.tiles {
             // Temperature effects
             tile.temperature = (tile.temperature + weather.temperature * 0.01).clamp(0.0, 1.0);
-            
+
             // Moisture effects from precipitation
             if weather.precipitation > 0.5 {
-                tile.moisture = (tile.moisture + weather.precipitation * 0.01).clamp(0.0, 1.0);
+                tile.moisture = (tile.moisture + weather.precipitation * 0.1).clamp(0.0, 1.0);
             }
-            
-            // Update vegetation based on conditions
-            tile.vegetation_density = self.calculate_vegetation_density(
-                tile.biome_type,
-                tile.fertility,
-                tile.moisture,
-            );
+
+            // Recalculate vegetation density based on new conditions
+            let biome_type = tile.biome_type;
+            tile.vegetation_density = self.calculate_vegetation_density(biome_type, tile.fertility, tile.moisture);
         }
+
         Ok(())
     }
     
@@ -461,6 +460,29 @@ impl Terrain {
         } else {
             None
         }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerrainGenerator {
+    pub seed: u64,
+    pub noise_generator: TerrainNoise,
+}
+
+impl TerrainGenerator {
+    pub fn new(seed: u64) -> Self {
+        Self {
+            seed,
+            noise_generator: TerrainNoise::new(seed),
+        }
+    }
+    
+    pub fn generate_terrain(&self, config: &WorldConfig) -> Result<Terrain> {
+        let mut terrain = Terrain::new(config.world_size.0, config.world_size.1);
+        terrain.seed = self.seed;
+        terrain.noise_generator = self.noise_generator.clone();
+        terrain.generate()?;
+        Ok(terrain)
     }
 }
 

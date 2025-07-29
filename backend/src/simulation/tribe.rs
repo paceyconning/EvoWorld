@@ -294,6 +294,10 @@ impl Tribe {
             TribeDecision::DiplomaticMission(tribe_id, mission_type) => {
                 self.send_diplomatic_mission(tribe_id, mission_type, tick)?;
             }
+            TribeDecision::Idle => {
+                // TODO: Implement idle behavior
+                debug!("Tribe {} is idle", self.name);
+            }
         }
         
         // Record decision in history
@@ -373,44 +377,48 @@ impl Tribe {
     
     pub fn update_relationship_with(&mut self, other_tribe: &mut Tribe, tick: u64) {
         // Find existing relationship or create new one
-        let relationship = self.relationships
-            .iter_mut()
-            .find(|r| r.target_tribe_id == other_tribe.id)
-            .unwrap_or_else(|| {
-                let new_rel = TribeRelationship {
-                    target_tribe_id: other_tribe.id,
-                    relationship_type: TribeRelationshipType::Neutral,
-                    strength: 0.0,
-                    trust: 0.5,
-                    trade_agreements: Vec::new(),
-                    conflicts: Vec::new(),
-                };
-                self.relationships.push(new_rel);
-                self.relationships.last_mut().unwrap()
-            });
+        let relationship_index = self.relationships
+            .iter()
+            .position(|r| r.target_tribe_id == other_tribe.id);
         
-        // Update relationship based on various factors
-        let distance = (self.center_position - other_tribe.center_position).length();
-        
-        if distance < 30.0 {
-            // Close proximity - potential for conflict or cooperation
-            if rand::random::<f32>() < 0.1 {
-                relationship.strength += 0.1; // Cooperation
-            } else if rand::random::<f32>() < 0.05 {
-                relationship.strength -= 0.1; // Conflict
+        if let Some(index) = relationship_index {
+            // Update existing relationship
+            let relationship = &mut self.relationships[index];
+            
+            // Update relationship based on various factors
+            let distance = (self.center_position - other_tribe.center_position).length();
+            
+            if distance < 30.0 {
+                // Close proximity - potential for conflict or cooperation
+                if rand::random::<f32>() < 0.1 {
+                    relationship.strength += 0.1; // Cooperation
+                } else if rand::random::<f32>() < 0.05 {
+                    relationship.strength -= 0.1; // Conflict
+                }
             }
+            
+            // Clamp relationship strength
+            relationship.strength = relationship.strength.clamp(-1.0, 1.0);
+            
+            // Update relationship type based on strength
+            relationship.relationship_type = match relationship.strength {
+                s if s > 0.7 => TribeRelationshipType::Ally,
+                s if s > 0.3 => TribeRelationshipType::Neutral,
+                s if s > -0.3 => TribeRelationshipType::Rival,
+                _ => TribeRelationshipType::Enemy,
+            };
+        } else {
+            // Create new relationship
+            let new_rel = TribeRelationship {
+                target_tribe_id: other_tribe.id,
+                relationship_type: TribeRelationshipType::Neutral,
+                strength: 0.0,
+                trust: 0.5,
+                trade_agreements: Vec::new(),
+                conflicts: Vec::new(),
+            };
+            self.relationships.push(new_rel);
         }
-        
-        // Clamp relationship strength
-        relationship.strength = relationship.strength.clamp(-1.0, 1.0);
-        
-        // Update relationship type based on strength
-        relationship.relationship_type = match relationship.strength {
-            s if s > 0.7 => TribeRelationshipType::Ally,
-            s if s > 0.3 => TribeRelationshipType::Neutral,
-            s if s > -0.3 => TribeRelationshipType::Rival,
-            _ => TribeRelationshipType::Enemy,
-        };
     }
     
     fn analyze_situation(&self, world: &super::world::World) -> Result<TribeSituation> {

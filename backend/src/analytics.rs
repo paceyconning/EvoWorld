@@ -1,11 +1,11 @@
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use tracing::info;
+use serde::{Deserialize, Serialize};
+use tracing::{info, debug, error};
 
 use crate::database;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct AnalyticsEngine {
     pub db_pool: PgPool,
 }

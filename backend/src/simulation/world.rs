@@ -323,18 +323,28 @@ impl World {
     
     pub fn update_tribe_relationships(&mut self, tick: u64) -> Result<()> {
         // Update relationships between tribes based on proximity, trade, conflicts, etc.
-        for i in 0..self.tribes.len() {
-            for j in (i + 1)..self.tribes.len() {
+        let tribe_count = self.tribes.len();
+        
+        for i in 0..tribe_count {
+            for j in (i + 1)..tribe_count {
                 let distance = (self.tribes[i].center_position - self.tribes[j].center_position).length();
-                
+
                 if distance < 100.0 {
                     // Tribes are close enough to interact
-                    // Update relationship based on various factors
-                    self.tribes[i].update_relationship_with(&mut self.tribes[j], tick);
+                    // Create temporary copies to avoid borrowing issues
+                    let mut tribe_i = self.tribes[i].clone();
+                    let mut tribe_j = self.tribes[j].clone();
+                    
+                    // Update relationship
+                    tribe_i.update_relationship_with(&mut tribe_j, tick);
+                    
+                    // Update the original tribes
+                    self.tribes[i] = tribe_i;
+                    self.tribes[j] = tribe_j;
                 }
             }
         }
-        
+
         Ok(())
     }
     
@@ -391,36 +401,44 @@ impl World {
         // Handle birth, death, and aging
         let mut new_humanoids = Vec::new();
         let mut humanoids_to_remove = Vec::new();
-        
-        for (i, humanoid) in self.humanoids.iter_mut().enumerate() {
+
+        // First pass: calculate probabilities and collect indices
+        for (i, humanoid) in self.humanoids.iter().enumerate() {
             // Age the humanoid
-            humanoid.age += 1;
-            
+            let mut updated_humanoid = humanoid.clone();
+            updated_humanoid.age += 1;
+
             // Check for death
-            let death_probability = self.calculate_death_probability(humanoid);
+            let death_probability = self.calculate_death_probability(&updated_humanoid);
             if rand::random::<f32>() < death_probability {
                 humanoids_to_remove.push(i);
                 continue;
             }
-            
+
             // Check for reproduction
-            if humanoid.age > 20 && humanoid.age < 50 {
-                let reproduction_probability = self.calculate_reproduction_probability(humanoid);
+            if updated_humanoid.age > 20 && updated_humanoid.age < 50 {
+                let reproduction_probability = self.calculate_reproduction_probability(&updated_humanoid);
                 if rand::random::<f32>() < reproduction_probability {
-                    let child = self.create_child(humanoid, tick)?;
+                    let child = self.create_child(&updated_humanoid, tick)?;
                     new_humanoids.push(child);
                 }
             }
         }
-        
-        // Apply changes
-        self.humanoids.extend(new_humanoids);
-        
+
+        // Second pass: apply changes
         // Remove dead humanoids (in reverse order)
         for &index in humanoids_to_remove.iter().rev() {
             self.humanoids.remove(index);
         }
-        
+
+        // Add new humanoids
+        self.humanoids.extend(new_humanoids);
+
+        // Update ages
+        for humanoid in &mut self.humanoids {
+            humanoid.age += 1;
+        }
+
         Ok(())
     }
     
@@ -446,26 +464,26 @@ impl World {
         }
     }
     
-    fn find_nearby_groups(&self, humanoids: &[&Humanoid], max_distance: f32) -> Vec<Vec<&Humanoid>> {
+    fn find_nearby_groups<'a>(&self, humanoids: &[&'a Humanoid], max_distance: f32) -> Vec<Vec<&'a Humanoid>> {
         let mut groups = Vec::new();
         let mut visited = std::collections::HashSet::new();
-        
+
         for &humanoid in humanoids {
             if visited.contains(&humanoid.id) {
                 continue;
             }
-            
+
             let mut group = Vec::new();
             let mut to_visit = vec![humanoid];
-            
+
             while let Some(current) = to_visit.pop() {
                 if visited.contains(&current.id) {
                     continue;
                 }
-                
+
                 visited.insert(current.id);
                 group.push(current);
-                
+
                 // Find nearby unvisited humanoids
                 for &other in humanoids {
                     if !visited.contains(&other.id) {
@@ -476,12 +494,12 @@ impl World {
                     }
                 }
             }
-            
+
             if group.len() >= 2 {
                 groups.push(group);
             }
         }
-        
+
         groups
     }
     

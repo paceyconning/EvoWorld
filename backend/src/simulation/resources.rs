@@ -2,9 +2,39 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use glam::Vec2;
+use rand::Rng;
 use tracing::debug;
 
 use crate::config::WorldConfig;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum ResourceType {
+    // Food resources
+    Food,
+    Water,
+    Herbs,
+    Berries,
+    Fish,
+    Game,
+    
+    // Material resources
+    Wood,
+    Stone,
+    Metal,
+    Clay,
+    Fiber,
+    Hide,
+    Bone,
+    
+    // Mineral resources
+    Minerals,
+    PreciousMetals,
+    Gems,
+    Coal,
+    Oil,
+    Salt,
+    Dyes,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Resource {
@@ -19,30 +49,6 @@ pub struct Resource {
     pub discovered_by: Option<Uuid>,
     pub depletion_rate: f32,
     pub max_quantity: f32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum ResourceType {
-    Food,
-    Water,
-    Wood,
-    Stone,
-    Metal,
-    Clay,
-    Fiber,
-    Hide,
-    Bone,
-    Herbs,
-    Berries,
-    Fish,
-    Game,
-    Minerals,
-    PreciousMetals,
-    Gems,
-    Oil,
-    Coal,
-    Salt,
-    Dyes,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

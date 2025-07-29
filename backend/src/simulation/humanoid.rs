@@ -296,6 +296,22 @@ impl Humanoid {
             Action::Trade(partner_id, items) => {
                 self.trade(partner_id, items, world)?;
             }
+            Action::Explore => {
+                // TODO: Implement exploration behavior
+                debug!("Humanoid {} is exploring", self.name);
+            }
+            Action::Defend => {
+                // TODO: Implement defense behavior
+                debug!("Humanoid {} is defending", self.name);
+            }
+            Action::Flee => {
+                // TODO: Implement fleeing behavior
+                debug!("Humanoid {} is fleeing", self.name);
+            }
+            Action::Idle => {
+                // TODO: Implement idle behavior
+                debug!("Humanoid {} is idle", self.name);
+            }
         }
         
         self.current_behavior = Some(format!("{:?}", action));
@@ -470,8 +486,8 @@ impl Inventory {
     
     pub fn add_resource(&mut self, resource_type: super::resources::ResourceType, amount: f32) {
         match resource_type {
-            super::resources::ResourceType::Food => self.food += amount,
-            super::resources::ResourceType::Water => self.water += amount,
+            super::resources::ResourceType::Food => self.inventory.food += amount,
+            super::resources::ResourceType::Water => self.inventory.water += amount,
             super::resources::ResourceType::Wood => self.add_material(MaterialType::Wood, amount),
             super::resources::ResourceType::Stone => self.add_material(MaterialType::Stone, amount),
             super::resources::ResourceType::Metal => self.add_material(MaterialType::Metal, amount),
@@ -479,6 +495,50 @@ impl Inventory {
             super::resources::ResourceType::Fiber => self.add_material(MaterialType::Fiber, amount),
             super::resources::ResourceType::Hide => self.add_material(MaterialType::Hide, amount),
             super::resources::ResourceType::Bone => self.add_material(MaterialType::Bone, amount),
+            super::resources::ResourceType::Herbs => {
+                // TODO: Add herbs to inventory
+                debug!("Added {} herbs to inventory", amount);
+            }
+            super::resources::ResourceType::Berries => {
+                // TODO: Add berries to inventory
+                debug!("Added {} berries to inventory", amount);
+            }
+            super::resources::ResourceType::Fish => {
+                // TODO: Add fish to inventory
+                debug!("Added {} fish to inventory", amount);
+            }
+            super::resources::ResourceType::Game => {
+                // TODO: Add game to inventory
+                debug!("Added {} game to inventory", amount);
+            }
+            super::resources::ResourceType::Minerals => {
+                // TODO: Add minerals to inventory
+                debug!("Added {} minerals to inventory", amount);
+            }
+            super::resources::ResourceType::PreciousMetals => {
+                // TODO: Add precious metals to inventory
+                debug!("Added {} precious metals to inventory", amount);
+            }
+            super::resources::ResourceType::Gems => {
+                // TODO: Add gems to inventory
+                debug!("Added {} gems to inventory", amount);
+            }
+            super::resources::ResourceType::Oil => {
+                // TODO: Add oil to inventory
+                debug!("Added {} oil to inventory", amount);
+            }
+            super::resources::ResourceType::Coal => {
+                // TODO: Add coal to inventory
+                debug!("Added {} coal to inventory", amount);
+            }
+            super::resources::ResourceType::Salt => {
+                // TODO: Add salt to inventory
+                debug!("Added {} salt to inventory", amount);
+            }
+            super::resources::ResourceType::Dyes => {
+                // TODO: Add dyes to inventory
+                debug!("Added {} dyes to inventory", amount);
+            }
         }
     }
     
