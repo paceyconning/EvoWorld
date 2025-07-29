@@ -117,12 +117,14 @@ cargo run
 
 **Current Status (2025-01):**
 - ✅ **Backend Compilation**: All compilation errors fixed - project now compiles successfully
+- ✅ **Terrain Generation**: Complete procedural terrain generation with biomes, rivers, minerals, and structures
 - ✅ **Core Systems**: Procreation, memory, learning, and creativity-driven tech/culture
 - ✅ **Resource System**: Real-world resources and tech tree
 - ✅ **Environmental Systems**: Impact and ecosystem dynamics
 - ✅ **Analytics Engine**: Evolution, tech, society, culture, and environment tracking
 - ✅ **Data Persistence**: Robust database and auto-save
 - ✅ **WebSocket Server**: Real-time frontend integration
+- 🔄 **AI Behavior Trees**: Core structure implemented, decision-making logic in progress
 - 🔄 **Database Integration**: Structure complete, sqlx queries temporarily disabled for development
 - 🔄 **Frontend**: Minimal rendering and UI (Godot 4) - In Progress
 - 🔄 **Testing**: Comprehensive test suite - Planned

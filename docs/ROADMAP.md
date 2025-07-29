@@ -7,13 +7,15 @@
 ## 📅 Phase 1: Immediate Priorities (Critical Path)
 
 - [x] **Implement missing TerrainGenerator**  
-  _Backend: Unblock simulation engine_
+  _Backend: ✅ Complete procedural terrain generation with biomes, rivers, minerals, and structures_
 - [x] **Create basic Godot scenes**  
   _Frontend: Humanoid.tscn, Resource.tscn, Building.tscn_
 - [x] **Set up database schema**  
   _Backend: Ensure DB operations work_
 - [x] **Fix all compilation errors**  
   _Backend: ✅ All 22 compilation errors resolved - project now compiles successfully_
+- [ ] **Complete AI behavior trees**  
+  _Backend: Implement decision-making logic for humanoids and tribes_
 - [ ] **Complete core simulation loop**  
   _Backend: End-to-end run, WebSocket, persistence_
 - [ ] **Minimal frontend rendering**  
@@ -24,6 +26,7 @@
 ## 🖥️ Backend Server Milestones (Prioritized Before Further Frontend Work)
 
 - [x] **Fix compilation issues:** ✅ Resolved WebSocket imports, borrowing conflicts, missing imports, sqlx queries, recursive async functions, and moved value issues
+- [x] **Complete terrain generation:** ✅ Multi-scale noise generation, realistic biomes, river systems, mineral deposits, and terrain structures
 - [~] **Enhance simulation engine:** Optimize tick/update logic, add logging, improve resource/event processing
 - [ ] **Expand AI behavior:** Add learning, adaptation, more actions, richer personality/memory
 - [ ] **Deepen social & cultural systems:** Cultural transmission, conflict, alliances, social events
@@ -36,10 +39,12 @@
 
 ## 🚀 Phase 2: Short-term Goals
 
+- [ ] **Complete AI behavior trees**  
+  _Backend: Implement decision-making logic for humanoids and tribes_
 - [ ] **Re-enable database integration**  
   _Backend: Fix sqlx queries with proper DATABASE_URL configuration_
-- [ ] **Enhance AI behavior**  
-  _Backend: Smarter decision-making, learning_
+- [ ] **Enhance resource management**  
+  _Backend: Full resource spawning, consumption, and regeneration_
 - [ ] **Expand social systems**  
   _Backend: Tribe/culture, conflict, transmission_
 - [ ] **Improve visualization**  
