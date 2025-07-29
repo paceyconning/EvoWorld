@@ -1,56 +1,40 @@
 # EvoWorld: Autonomous Civilization Evolution Simulation
 
-**Tagline**: *Watch as humanoids rise from survival to sentience – a world that evolves without your hand, rendered in stunning detail with creative viewing modes.*
+> **Watch as humanoids rise from survival to sentience** – a world that evolves without your hand, rendered in stunning detail with creative viewing modes.
 
----
+[![Rust](https://img.shields.io/badge/Rust-1.88+-orange.svg)](https://www.rust-lang.org/)
+[![Godot](https://img.shields.io/badge/Godot-4.x-blue.svg)](https://godotengine.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**Project Status (2025-06):**
-- **Backend Complete:**
-  - Simulation engine, AI, and generational evolution
-  - Procreation, memory, learning, and creativity-driven tech/culture
-  - Real-world resource system and tech tree
-  - Environmental impact and ecosystem dynamics
-  - Analytics engine for evolution, tech, society, culture, and environment
-  - Robust database persistence and auto-save
-  - WebSocket server for real-time frontend integration
-- **Next:** Minimal frontend rendering and UI (Godot 4)
+## 🎯 Vision
 
----
+EvoWorld is a **single-user, persistent simulation** where you act as a **passive observer**, witnessing the **autonomous evolution** of humanoid lifeforms. The simulation runs continuously, driven by **AI-driven emergent behavior**, **environmental challenges**, and **internal social dynamics**.
 
-**Note:**
-- This project uses a living context file: **CONTEXT.md**. It contains the up-to-date project vision, architecture, roadmap, and critical issues. Please reference it for the latest status and development priorities.
+## ✨ Core Features
 
----
+### 🧠 Autonomous Evolution
+- **No Direct Control**: Pure observation - you don't intervene in the simulation
+- **Exponential Growth**: Humanoids adapt through survival → social organization → technological innovation
+- **Emergent Storytelling**: Unique narratives through AI-driven behavior and environmental randomness
+- **Generational Knowledge**: Inheritance, diffusion, and creativity-driven breakthroughs
 
-## Vision
-
-EvoWorld is a **single-user, persistent simulation** where the user acts as a **passive observer**, witnessing the **autonomous evolution** of humanoid lifeforms. The simulation runs continuously, driven by **AI-driven emergent behavior**, **environmental challenges**, and **internal social dynamics**.
-
-## Core Features
-
-### 1. Autonomous Evolution
-- **No Direct Control**: The user does **not intervene** in the simulation
-- **Exponential Growth**: Humanoids adapt through stages of survival, social organization, and technological innovation
-- **Emergent Storytelling**: Unique narratives generated through AI-driven behavior and environmental randomness
-- **Generational Knowledge & Tech**: Inheritance, diffusion, and creativity-driven breakthroughs
-
-### 2. Detailed, Immersive Simulation
-- **Dynamic, Stylized Environments**: Procedurally generated worlds with realistic terrain, dynamic weather, and evolving ecosystems
-- **Real-World Resources**: All major resources needed for technological progress (copper, silicon, rare earths, etc.)
+### 🌍 Detailed Simulation
+- **Dynamic Environments**: Procedurally generated worlds with realistic terrain, weather, and ecosystems
+- **Real-World Resources**: Complete resource system (copper, silicon, rare earths, etc.)
 - **Tech Tree**: Realistic progression from stone tools to electronics and beyond
 - **Environmental Impact**: Resource depletion, pollution, and ecosystem feedback
 
-### 3. Social & Cultural Systems
+### 👥 Social & Cultural Systems
 - **Procreation & Inheritance**: Traits, knowledge, and culture passed through generations
 - **Cultural Transmission**: Traditions, values, and innovations spread through socialization
 - **Emergent Group Dynamics**: Tribes, hierarchies, alliances, and conflicts
 
-### 4. Analytics & Observation
-- **Evolution Metrics**: Population, tech, society, environment, and culture
+### 📊 Analytics & Observation
+- **Evolution Metrics**: Population, tech, society, environment, and culture tracking
 - **Event Tracking**: Key decisions, breakthroughs, and emergent phenomena
 - **Data Persistence**: Robust database and auto-save for long-term simulation
 
-## Architecture
+## 🏗️ Architecture
 
 ### Backend (Rust)
 - **Simulation Engine**: Core autonomous AI-driven behavior system
@@ -63,7 +47,7 @@ EvoWorld is a **single-user, persistent simulation** where the user acts as a **
 - **UI System**: Data panels, controls, and observation tools
 - **WebSocket Client**: Real-time data streaming from backend
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 EvoWorld/
@@ -89,8 +73,6 @@ EvoWorld/
 ├── frontend/               # Godot 4 frontend
 │   ├── project.godot       # Godot project file
 │   ├── scripts/            # GDScript files
-│   │   ├── WebSocketClient.gd
-│   │   └── WorldRenderer.gd
 │   └── scenes/             # Godot scenes
 ├── tools/                  # Development tools
 ├── docs/                   # Documentation
@@ -98,10 +80,64 @@ EvoWorld/
 └── README.md               # This file
 ```
 
-## Getting Started
+## 🚀 Getting Started
 
-See the original instructions below for backend and frontend setup. The backend is now ready for long-term simulation and frontend integration.
+### Prerequisites
+- **Rust 1.88+** - [Install Rust](https://www.rust-lang.org/tools/install)
+- **Godot 4.x** - [Download Godot](https://godotengine.org/download)
+- **PostgreSQL** - [Install PostgreSQL](https://www.postgresql.org/download/)
+
+### Backend Setup
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/evoworld.git
+cd evoworld
+
+# Setup backend
+cd backend
+cargo build
+cargo test
+
+# Configure database
+cp config.toml.example config.toml
+# Edit config.toml with your database settings
+
+# Run the simulation
+cargo run
+```
+
+### Frontend Setup
+```bash
+# Open Godot 4
+# Import the frontend/ directory as a project
+# Run the main scene
+```
+
+## 📈 Project Status
+
+**Current Status (2025-01):**
+- ✅ **Backend Complete**: Simulation engine, AI, and generational evolution
+- ✅ **Core Systems**: Procreation, memory, learning, and creativity-driven tech/culture
+- ✅ **Resource System**: Real-world resources and tech tree
+- ✅ **Environmental Systems**: Impact and ecosystem dynamics
+- ✅ **Analytics Engine**: Evolution, tech, society, culture, and environment tracking
+- ✅ **Data Persistence**: Robust database and auto-save
+- ✅ **WebSocket Server**: Real-time frontend integration
+- 🔄 **Frontend**: Minimal rendering and UI (Godot 4) - In Progress
+
+## 📚 Documentation
+
+- **[CONTEXT.md](CONTEXT.md)** - Living context file with up-to-date project vision, architecture, roadmap, and critical issues
+- **[docs/](docs/)** - Additional documentation and guides
+
+## 🤝 Contributing
+
+This is a single-user simulation project, but contributions to improve the codebase are welcome. Please read the [CONTEXT.md](CONTEXT.md) file to understand the current development priorities.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-**EvoWorld** - Where civilizations rise and fall, all on their own.
+**EvoWorld** - Where civilizations rise and fall, all on their own. 🌍✨

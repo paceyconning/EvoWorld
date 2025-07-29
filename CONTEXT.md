@@ -1,164 +1,82 @@
-# EvoWorld Project Context File
+# EvoWorld Project Context
+
+> **IMPORTANT**: This is a living context file that should be updated whenever significant progress is made. After updating this file, the agent should also update the README.md to reflect any changes in project status, features, or development progress to keep both files in sync.
 
 ## Project Overview
-EvoWorld is a complex evolutionary simulation game with a Rust backend and Godot frontend. The project simulates humanoid evolution, tribal societies, and environmental interactions in a procedurally generated world.
+EvoWorld is an ambitious civilization evolution simulation game built in Rust. The project simulates the development of humanoid societies from primitive tribes to advanced civilizations, featuring complex AI behaviors, procedural terrain generation, resource management, and emergent storytelling.
 
 ## Current Development Status
 
-### Backend (Rust)
-- **Core Simulation Engine**: ✅ Implemented
-- **Terrain Generation**: 🔄 In Progress - Major compilation fixes completed, 21 errors remaining
-- **AI Behavior System**: ✅ Implemented
-- **Database Integration**: ⏳ Pending
-- **WebSocket Communication**: ✅ Implemented
+### Recent Progress (Latest Session)
+- **Major compilation fixes completed**: Reduced compilation errors from 50+ to 22 errors
+- **Fixed critical missing methods**: Added `apply_behavior_result` and `try_reproduction` to Humanoid struct
+- **Resolved borrowing issues**: Fixed mutable/immutable borrow conflicts in engine.rs and terrain.rs
+- **Fixed type mismatches**: Corrected Vec2Def usage and JSON serialization issues
+- **Added missing imports**: Fixed SliceRandom import for choose() method
+- **Fixed partial move issues**: Resolved pattern matching issues in tribe.rs
+- **Updated function signatures**: Fixed terrain method calls and parameter mismatches
 
-### Frontend (Godot 4)
-- **Basic Scenes**: ⏳ Pending
-- **3D World Rendering**: ⏳ Pending
-- **WebSocket Client**: ✅ Implemented
+### Technical Notes
+- **Vec2Def unification**: Successfully replaced all `glam::Vec2` with custom `Vec2Def` for serialization
+- **ResourceType enum**: All variants now properly defined and matched in functions
+- **TerrainGenerator**: Basic structure complete, compilation issues resolved
+- **Behavior Trees**: Core structure implemented, recursive async function needs boxing fix
 
-## Current TODO List
+## TODO List
 
-### 🔄 In Progress - Critical Compilation Fixes (21 errors remaining)
+### Critical Compilation Fixes (Remaining - 22 errors)
+1. **Fix WebSocket Message enum visibility** - `tokio_tungstenite::Message` is private
+2. **Fix recursive async function** - Add boxing to `execute_node` in behavior.rs
+3. **Fix database import issues** - `crate::database` unresolved in analytics.rs
+4. **Fix sqlx query macros** - DATABASE_URL not set or cargo sqlx prepare needed
+5. **Fix moved value issues** - WebSocket client borrowing problems
+6. **Fix remaining borrowing conflicts** - Engine.rs world cloning approach
 
-1. **Fix Missing Imports and Trait Issues**:
-   - Add missing SliceRandom import for choose() method
-   - Fix WebSocket Message enum visibility
-   - Add missing trait implementations
+### Pending - Next Major Tasks
+7. **Complete Terrain Generation System** - Implement full procedural generation
+8. **Implement AI Behavior Trees** - Complete decision-making logic
+9. **Add Resource Management** - Full resource spawning and consumption
+10. **Build WebSocket Communication** - Real-time client-server updates
 
-2. **Fix Borrowing and Ownership Issues**:
-   - Fix mutable/immutable borrow conflicts in engine.rs
-   - Fix partial move issues in pattern matching (Action::Build, TribeDecision::ResourceGathering)
-   - Fix moved value issues in WebSocket client
+## Architecture Overview
 
-3. **Fix Recursive Async Function**:
-   - Add boxing to recursive async function in behavior.rs
+### Core Components
+- **SimulationEngine**: Main simulation loop and world state management
+- **World**: Central game state containing humanoids, tribes, resources, and terrain
+- **Humanoid**: Individual AI entities with skills, memories, and behaviors
+- **Tribe**: Social groups with culture, technology, and collective decision-making
+- **TerrainGenerator**: Procedural world generation with biomes and structures
+- **ResourceManager**: Resource spawning, distribution, and management
+- **BehaviorTree**: AI decision-making system for humanoids and tribes
 
-4. **Fix Missing Match Cases**:
-   - Add missing ResourceType variants in get_base_quantity method
+### Data Structures
+- **Terrain**: Tile-based world with elevation, moisture, temperature, and biomes
+- **Humanoid**: Individual with position, skills, inventory, personality, and goals
+- **Tribe**: Social group with territory, culture, technology, and relationships
+- **Resource**: World objects with type, position, quantity, and quality
+- **Event**: Historical records of significant world events
+- **Vec2Def**: Custom 2D vector for serialization (replaces glam::Vec2)
 
-### ⏳ Pending - Next Major Tasks
+### Key Enums
+- **BiomeType**: Desert, Forest, Mountain, Ocean, etc.
+- **ResourceType**: Food, Water, Wood, Stone, Iron, Gold, etc.
+- **EventCategory**: Birth, Death, Discovery, Conflict, etc.
+- **BehaviorNode**: Sequence, Selector, Action, Condition, etc.
+- **TribeDecision**: War, Trade, Technology, Cultural Event, etc.
 
-5. **Complete Terrain Generation Testing**:
-   - Run successful terrain generation tests
-   - Validate terrain properties and generation logic
-   - Test terrain serialization/deserialization
-
-6. **Database Schema Setup**:
-   - Create PostgreSQL database schema
-   - Implement database migrations
-   - Test data persistence
-
-7. **Core Simulation Loop**:
-   - Test end-to-end simulation run
-   - Validate WebSocket communication
-   - Test data persistence and analytics
-
-8. **Frontend Development**:
-   - Create basic Godot scenes (Humanoid.tscn, Resource.tscn, Building.tscn)
-   - Implement 3D world rendering
-   - Add basic camera controls and UI
-
-## Recent Progress
-- ✅ Fixed Vec2Def serialization issues by unifying implementations
-- ✅ Resolved duplicate type definition conflicts
-- ✅ Fixed ResourceType enum variants and match cases
-- ✅ Added missing type definitions (Skill, Inventory, Resources)
-- ✅ Fixed imports and references between modules
-- ✅ Fixed type mismatches (f32/f64, u32/u64)
-- ✅ Fixed missing enum variants and field mismatches
-- ✅ Fixed borrowing issues with event cloning
-- ✅ Improved error count from 159 to 21 errors
-- 🔄 Currently working on missing imports and remaining borrowing issues
-
-## Technical Notes
-- Using unified Vec2Def from terrain.rs for all vector operations
-- ResourceType enum now includes all necessary variants
-- TerrainGenerator implementation is complete but needs testing
-- WebSocket server implementation is functional
-- Major structural improvements completed, focusing on type safety
-- Most critical compilation issues resolved, focusing on remaining imports and borrowing
-
-## Technical Architecture
-
-### Backend Structure
-```
-backend/
-├── src/
-│   ├── main.rs              # Application entry point
-│   ├── config.rs            # Configuration management
-│   ├── database.rs          # Database operations
-│   ├── websocket.rs         # WebSocket server
-│   ├── analytics.rs         # Data analysis
-│   └── simulation/
-│       ├── mod.rs           # Simulation module
-│       ├── engine.rs        # Main simulation engine
-│       ├── world.rs         # World state management
-│       ├── terrain.rs       # Terrain generation
-│       ├── humanoid.rs      # Humanoid entities
-│       ├── tribe.rs         # Tribal societies
-│       ├── behavior.rs      # AI behavior system
-│       ├── events.rs        # Event system
-│       └── resources.rs     # Resource management
-```
-
-### Frontend Structure
-```
-frontend/
-├── project.godot           # Godot project file
-├── scenes/                 # 3D scenes
-│   ├── Humanoid.tscn      # Humanoid entity scene
-│   ├── Resource.tscn      # Resource entity scene
-│   └── Building.tscn      # Building entity scene
-└── scripts/               # GDScript files
-    ├── WebSocketClient.gd # WebSocket client
-    └── WorldRenderer.gd   # 3D world rendering
-```
-
-## Key Features
-
-### Simulation Engine
-- **Real-time Evolution**: Humanoids evolve through generations
-- **Complex AI**: Behavior trees and decision-making systems
-- **Social Dynamics**: Tribal societies with relationships and conflicts
-- **Resource Management**: Dynamic resource generation and consumption
-- **Environmental Interaction**: Terrain affects behavior and survival
-
-### Technical Features
-- **WebSocket Communication**: Real-time data streaming
-- **Database Persistence**: PostgreSQL for data storage
-- **Procedural Generation**: Terrain and world generation
-- **Modular Architecture**: Clean separation of concerns
-
-## Development Guidelines
-
-### Code Quality
-- Use Rust's type system for safety
-- Implement comprehensive error handling
-- Write unit tests for critical components
-- Follow Rust naming conventions
-
-### Performance
-- Optimize for real-time simulation
-- Use efficient data structures
-- Minimize memory allocations
-- Profile critical paths
-
-### Documentation
-- Keep this context file updated
-- Document complex algorithms
-- Maintain clear API documentation
-- Update README with setup instructions
+## Development Environment
+- **Language**: Rust
+- **Database**: PostgreSQL with sqlx
+- **WebSocket**: tokio-tungstenite for real-time communication
+- **Serialization**: serde for JSON data persistence
+- **Randomness**: rand crate for procedural generation
+- **Async**: tokio for concurrent operations
 
 ## Next Steps
-1. Complete terrain generation compilation fixes
-2. Set up database schema and testing
-3. Create basic frontend scenes
-4. Implement end-to-end simulation testing
-5. Add comprehensive error handling and logging
-
-## Notes
-- The project uses Rust 1.88+ and Godot 4.x
-- PostgreSQL is required for data persistence
-- WebSocket communication enables real-time frontend updates
-- The simulation runs at configurable tick rates
+1. Complete remaining compilation fixes (22 errors)
+2. Implement full terrain generation system
+3. Complete AI behavior tree implementation
+4. Add comprehensive resource management
+5. Build WebSocket communication layer
+6. Create frontend visualization
+7. Add comprehensive testing suite
