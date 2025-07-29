@@ -158,6 +158,35 @@ impl Inventory {
             }
         }
     }
+
+    pub fn get_resource_amount(&self, resource_type: ResourceType) -> f32 {
+        match resource_type {
+            ResourceType::Food => self.food,
+            ResourceType::Water => self.water,
+            _ => {
+                // Convert ResourceType to MaterialType for lookup
+                let material_type = match resource_type {
+                    ResourceType::Wood => MaterialType::Wood,
+                    ResourceType::Stone => MaterialType::Stone,
+                    ResourceType::Iron | ResourceType::Copper | ResourceType::Gold | ResourceType::Silver | ResourceType::Aluminum | ResourceType::Titanium | ResourceType::Tin | ResourceType::Lead | ResourceType::Zinc | ResourceType::Nickel | ResourceType::Silicon | ResourceType::Uranium | ResourceType::RareEarths | ResourceType::Phosphorus | ResourceType::Sulfur | ResourceType::Lithium | ResourceType::Cobalt | ResourceType::Platinum => MaterialType::Metal,
+                    ResourceType::Clay => MaterialType::Clay,
+                    ResourceType::Hide => MaterialType::Hide,
+                    ResourceType::Fiber => MaterialType::Fiber,
+                    ResourceType::Bone => MaterialType::Bone,
+                    ResourceType::Shell => MaterialType::Shell,
+                    ResourceType::Obsidian => MaterialType::Obsidian,
+                    ResourceType::Flint => MaterialType::Flint,
+                    _ => MaterialType::Stone, // Default fallback
+                };
+                
+                // Find material and return quantity
+                self.materials.iter()
+                    .find(|m| m.material_type == material_type)
+                    .map(|m| m.quantity)
+                    .unwrap_or(0.0)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -181,6 +210,7 @@ pub enum ToolType {
     Basket,
     Rope,
     Crafting,
+    StoneTool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

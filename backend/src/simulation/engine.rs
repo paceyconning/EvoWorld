@@ -125,24 +125,14 @@ impl SimulationEngine {
         // Create behavior tree for this humanoid
         let behavior_tree = BehaviorTree::new_for_humanoid(humanoid, &self.config.ai);
         
-        // Execute behavior tree
-        let result = behavior_tree.execute_simple().await?;
+        // Get the actual world for behavior processing
+        let world = self.world.read().await;
         
-        // Create a minimal world for behavior processing
-        let world_config = crate::config::WorldConfig {
-            world_size: (100, 100),
-            terrain_seed: 42,
-            initial_population: 10,
-            resource_density: 0.3,
-            weather_variability: 0.1,
-        };
-        let world = super::world::World::new(&world_config)?;
+        // Execute behavior tree with humanoid context
+        let action = behavior_tree.execute_with_humanoid(humanoid, &world, tick).await?;
         
-        // Apply behavior results to humanoid
-        humanoid.apply_behavior_result(result, &world, tick)?;
-        
-        // Check for reproduction
-        let child = humanoid.try_reproduction(&world, tick)?;
+        // Apply the action to the humanoid
+        let child = humanoid.apply_action(action, &world, tick)?;
         
         // Check for emergent events
         let event = humanoid.check_emergent_events(&world, tick)?;

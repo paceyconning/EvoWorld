@@ -123,7 +123,7 @@ pub struct Goal {
     pub deadline: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum GoalType {
     FindFood,
     FindWater,
