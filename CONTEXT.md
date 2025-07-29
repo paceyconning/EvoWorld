@@ -1,6 +1,6 @@
 # EvoWorld Project Context
 
-> **IMPORTANT**: This is a living context file that should be updated whenever significant progress is made. After updating this file, the agent should also update the README.md to reflect any changes in project status, features, or development progress to keep both files in sync.
+> **IMPORTANT**: This is a living context file that should be updated whenever significant progress is made. After updating this file, the agent should also update the README.md and the roadmap in docs/ to reflect any changes in project status, features, or development progress to keep all documentation files in sync.
 
 ## Project Overview
 EvoWorld is an ambitious civilization evolution simulation game built in Rust. The project simulates the development of humanoid societies from primitive tribes to advanced civilizations, featuring complex AI behaviors, procedural terrain generation, resource management, and emergent storytelling.

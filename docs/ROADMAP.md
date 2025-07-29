@@ -12,6 +12,8 @@
   _Frontend: Humanoid.tscn, Resource.tscn, Building.tscn_
 - [x] **Set up database schema**  
   _Backend: Ensure DB operations work_
+- [x] **Fix all compilation errors**  
+  _Backend: ✅ All 22 compilation errors resolved - project now compiles successfully_
 - [ ] **Complete core simulation loop**  
   _Backend: End-to-end run, WebSocket, persistence_
 - [ ] **Minimal frontend rendering**  
@@ -21,6 +23,7 @@
 
 ## 🖥️ Backend Server Milestones (Prioritized Before Further Frontend Work)
 
+- [x] **Fix compilation issues:** ✅ Resolved WebSocket imports, borrowing conflicts, missing imports, sqlx queries, recursive async functions, and moved value issues
 - [~] **Enhance simulation engine:** Optimize tick/update logic, add logging, improve resource/event processing
 - [ ] **Expand AI behavior:** Add learning, adaptation, more actions, richer personality/memory
 - [ ] **Deepen social & cultural systems:** Cultural transmission, conflict, alliances, social events
@@ -33,6 +36,8 @@
 
 ## 🚀 Phase 2: Short-term Goals
 
+- [ ] **Re-enable database integration**  
+  _Backend: Fix sqlx queries with proper DATABASE_URL configuration_
 - [ ] **Enhance AI behavior**  
   _Backend: Smarter decision-making, learning_
 - [ ] **Expand social systems**  
@@ -54,4 +59,3 @@
 
 ## 🔄 How this roadmap is maintained
 - This file is automatically updated in sync with [CONTEXT.md](../CONTEXT.md) to reflect all major project changes, progress, and new priorities.
-- See [CONTEXT.md](../CONTEXT.md) for detailed project context and recent updates.
