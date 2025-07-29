@@ -2,6 +2,14 @@
 
 **Tagline**: *Watch as humanoids rise from survival to sentience – a world that evolves without your hand, rendered in stunning detail with creative viewing modes.*
 
+---
+
+**Note:**
+- This project uses a living context file: **CONTEXT.md**. It contains the up-to-date project vision, architecture, roadmap, and critical issues. Please reference it for the latest status and development priorities.
+- CI/CD workflows have been removed for now. If automated testing or deployment is needed in the future, they can be re-enabled.
+
+---
+
 ## Vision
 
 EvoWorld is a **single-user, persistent simulation** where the user acts as a **passive observer**, witnessing the **autonomous evolution** of humanoid lifeforms. The simulation runs continuously, driven by **AI-driven emergent behavior**, **environmental challenges**, and **internal social dynamics**.
@@ -71,8 +79,22 @@ EvoWorld/
 │   └── scenes/             # Godot scenes
 ├── tools/                  # Development tools
 ├── docs/                   # Documentation
-└── README.md              # This file
+├── CONTEXT.md              # Living context file
+└── README.md               # This file
 ```
+
+## Project Status
+
+- **Backend:** Core simulation, AI, and world management implemented. Some compilation errors remain (see CONTEXT.md).
+- **Frontend:** WebSocket client and renderer structure in place. 3D scenes and UI under development.
+- **Database:** Connection and persistence logic present. Schema and integration need refinement.
+- **CI/CD:** Not currently enabled.
+
+## Next Steps
+- Fix remaining backend compilation errors (see CONTEXT.md for details).
+- Implement and test basic 3D scenes in Godot frontend.
+- Finalize database schema and test persistence.
+- Begin end-to-end simulation testing.
 
 ## Getting Started
 
@@ -116,85 +138,12 @@ EvoWorld/
 ### Frontend Setup
 
 1. **Open Godot 4.2** and import the `frontend/` directory as a project
-
 2. **Run the frontend**:
    - Open the project in Godot
    - Press F5 or click "Play" to run
-
 3. **Connect to backend**:
    - The frontend will automatically connect to the WebSocket server
    - Ensure the backend is running on `ws://127.0.0.1:8080`
-
-## Development Roadmap
-
-### Phase 1: Core Simulation Engine ✅
-- [x] Basic simulation structure
-- [x] Humanoid AI with behavior trees
-- [x] World generation and terrain system
-- [x] Resource management
-- [x] Event system
-- [x] Database persistence
-
-### Phase 2: Social Systems 🚧
-- [ ] Tribe formation and evolution
-- [ ] Cultural development
-- [ ] Conflict and cooperation
-- [ ] Trade and economics
-- [ ] Government systems
-
-### Phase 3: Technological Evolution 🚧
-- [ ] Technology tree
-- [ ] Invention and discovery
-- [ ] Tool and building creation
-- [ ] Knowledge transmission
-- [ ] Scientific advancement
-
-### Phase 4: Advanced AI 🚧
-- [ ] Learning and adaptation
-- [ ] Personality development
-- [ ] Memory and experience
-- [ ] Emotional intelligence
-- [ ] Creative problem solving
-
-### Phase 5: Frontend Development 🚧
-- [ ] 3D world rendering
-- [ ] Multiple viewing modes
-- [ ] UI and controls
-- [ ] Real-time data visualization
-- [ ] Timeline and history views
-
-### Phase 6: Polish and Features 🚧
-- [ ] Advanced graphics and effects
-- [ ] Sound design and music
-- [ ] Performance optimization
-- [ ] User experience improvements
-- [ ] Documentation and tutorials
-
-## Configuration
-
-### Simulation Settings
-
-Edit `backend/config.toml` to customize the simulation:
-
-```toml
-[simulation]
-tick_rate = 10.0              # Simulation ticks per second
-max_humanoids = 1000          # Maximum humanoids in world
-save_interval = 100           # Save world state every N ticks
-log_interval = 10             # Log events every N ticks
-
-[world]
-world_size = [1000, 1000]     # World dimensions
-terrain_seed = 42             # Terrain generation seed
-climate_zones = 5             # Number of climate zones
-resource_density = 0.3        # Resource distribution density
-
-[ai]
-behavior_complexity = 5       # AI behavior complexity level
-learning_rate = 0.1           # AI learning rate
-memory_capacity = 100         # Memory capacity per humanoid
-decision_frequency = 1.0      # Decision-making frequency
-```
 
 ## Contributing
 
@@ -205,7 +154,6 @@ decision_frequency = 1.0      # Decision-making frequency
 5. **Open a Pull Request**
 
 ### Development Guidelines
-
 - **Rust**: Follow Rust coding standards and use `cargo fmt` and `cargo clippy`
 - **Godot**: Follow GDScript style guidelines
 - **Documentation**: Update documentation for any new features
@@ -216,7 +164,6 @@ decision_frequency = 1.0      # Decision-making frequency
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
-
 - Inspired by games like The Sims, Cities: Skylines, and Dwarf Fortress
 - Built with Rust for performance and Godot for graphics
 - Uses PostgreSQL for reliable data persistence
@@ -226,7 +173,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For questions, issues, or contributions:
 - Open an issue on GitHub
-- Join our Discord community
 - Check the documentation in the `docs/` folder
 
 ---
