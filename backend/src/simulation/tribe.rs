@@ -1,23 +1,23 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use glam::Vec2;
 use tracing::debug;
 
 use super::events::Event;
+use super::terrain::Vec2Def;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tribe {
     pub id: Uuid,
     pub name: String,
     pub leader_id: Option<Uuid>,
-    pub population: usize,
+    pub population: u32,
     pub member_ids: Vec<Uuid>,
-    pub center_position: Vec2,
-    pub territory: Vec<Vec2>,
+    pub center_position: Vec2Def,
+    pub territory: Vec<Vec2Def>,
     pub culture: Culture,
     pub technology_level: u32,
-    pub resources: TribeResources,
+    pub resources: Resources,
     pub relationships: Vec<TribeRelationship>,
     pub government: Government,
     pub history: Vec<TribeHistory>,
@@ -228,22 +228,80 @@ pub struct TribeHistory {
     pub impact: f32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Resources {
+    pub food: f32,
+    pub water: f32,
+    pub materials: std::collections::HashMap<super::resources::ResourceType, f32>,
+    pub tools: Vec<Tool>,
+    pub knowledge: Vec<Knowledge>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Tool {
+    pub name: String,
+    pub tool_type: ToolType,
+    pub quality: f32,
+    pub durability: f32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum ToolType {
+    Axe,
+    Pickaxe,
+    Knife,
+    Hammer,
+    Spear,
+    Bow,
+    Arrow,
+    Pot,
+    Basket,
+    Rope,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Knowledge {
+    pub knowledge_type: KnowledgeType,
+    pub level: f32,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum KnowledgeType {
+    Agriculture,
+    Hunting,
+    Toolmaking,
+    Medicine,
+    Astronomy,
+    Mathematics,
+    Engineering,
+    Philosophy,
+    Art,
+    Music,
+    Language,
+    Navigation,
+    Metallurgy,
+    Pottery,
+    Weaving,
+    Science,
+}
+
 impl Tribe {
     pub fn from_humanoids(member_ids: Vec<Uuid>, created_at: u64) -> Self {
         let name = format!("Tribe_{}", created_at);
-        let center_position = Vec2::new(0.0, 0.0); // Will be calculated from member positions
+        let center_position = Vec2Def::new(0.0, 0.0); // Will be calculated from member positions
         
         Self {
             id: Uuid::new_v4(),
             name,
             leader_id: None,
-            population: member_ids.len(),
+            population: member_ids.len() as u32,
             member_ids,
             center_position,
             territory: Vec::new(),
             culture: Culture::new(),
             technology_level: 0,
-            resources: TribeResources::new(),
+            resources: Resources::new(),
             relationships: Vec::new(),
             government: Government::new(),
             history: Vec::new(),
@@ -282,17 +340,21 @@ impl Tribe {
             TribeDecision::DeclareWar(tribe_id, reason) => {
                 self.declare_war(tribe_id, reason, tick)?;
             }
-            TribeDecision::DevelopTechnology(tech_type) => {
-                self.develop_technology(tech_type, tick)?;
+            TribeDecision::DevelopTechnology(ref tech_type) => {
+                debug!("Tribe {} developing technology: {}", self.name, tech_type);
+                // TODO: Implement technology development logic
+            },
+            TribeDecision::CulturalEvent(ref event_type) => {
+                debug!("Tribe {} organizing cultural event: {}", self.name, event_type);
+                // TODO: Implement cultural event logic
+            },
+            TribeDecision::ResourceGathering(ref resource_type) => {
+                // TODO: Implement resource gathering logic
+                debug!("[DECISION] {} gathers {}", self.name, resource_type);
             }
-            TribeDecision::CulturalEvent(event_type) => {
-                self.organize_cultural_event(event_type, tick)?;
-            }
-            TribeDecision::ResourceGathering(resource_type) => {
-                self.organize_resource_gathering(resource_type);
-            }
-            TribeDecision::DiplomaticMission(tribe_id, mission_type) => {
-                self.send_diplomatic_mission(tribe_id, mission_type, tick)?;
+            TribeDecision::DiplomaticMission(tribe_id, ref mission_type) => {
+                // TODO: Implement diplomatic mission logic
+                debug!("[DECISION] {} sends diplomatic mission to {}", self.name, tribe_id);
             }
             TribeDecision::Idle => {
                 // TODO: Implement idle behavior
@@ -321,7 +383,7 @@ impl Tribe {
                 "tribe_advancement",
                 &format!("{} reaches a new level of technological sophistication", self.name),
                 self.member_ids.clone(),
-                Some((self.center_position.x, self.center_position.y)),
+                Some((self.center_position.x.into(), self.center_position.y.into())),
                 0.8,
                 tick,
             )));
@@ -333,7 +395,7 @@ impl Tribe {
                 "cultural_renaissance",
                 &format!("{} experiences a cultural renaissance", self.name),
                 self.member_ids.clone(),
-                Some((self.center_position.x, self.center_position.y)),
+                Some((self.center_position.x.into(), self.center_position.y.into())),
                 0.7,
                 tick,
             )));
@@ -345,7 +407,7 @@ impl Tribe {
                 "population_milestone",
                 &format!("{} reaches a population of {} members", self.name, self.population),
                 self.member_ids.clone(),
-                Some((self.center_position.x, self.center_position.y)),
+                Some((self.center_position.x.into(), self.center_position.y.into())),
                 0.6,
                 tick,
             )));
@@ -423,7 +485,7 @@ impl Tribe {
     
     fn analyze_situation(&self, world: &super::world::World) -> Result<TribeSituation> {
         Ok(TribeSituation {
-            population: self.population,
+            population: self.population as usize,
             resources: self.resources.clone(),
             technology_level: self.technology_level,
             territory_size: self.territory.len(),
@@ -437,13 +499,13 @@ impl Tribe {
         let mut decisions = Vec::new();
         
         // Resource-based decisions
-        if situation.resources.food_storage < 50.0 {
+        if situation.resources.food < 50.0 {
             decisions.push(TribeDecision::ResourceGathering("food".to_string()));
         }
         
         // Expansion decisions
         if situation.population > 20 && situation.territory_size < 100 {
-            decisions.push(TribeDecision::ExpandTerritory(Vec2::new(1.0, 0.0), 10.0));
+            decisions.push(TribeDecision::ExpandTerritory(Vec2Def::new(1.0, 0.0), 10.0));
         }
         
         // Technology decisions
@@ -465,9 +527,13 @@ impl Tribe {
         Ok(decisions.first().cloned().unwrap_or(TribeDecision::Idle))
     }
     
-    fn expand_territory(&mut self, direction: Vec2, distance: f32) {
-        let new_position = self.center_position + direction * distance;
+    fn expand_territory(&mut self, direction: Vec2Def, distance: f32) {
+        let new_position = Vec2Def::new(
+            self.center_position.x + direction.x * distance,
+            self.center_position.y + direction.y * distance,
+        );
         self.territory.push(new_position);
+        self.center_position = new_position;
     }
     
     fn build_structure(&mut self, structure_type: String, world: &super::world::World, tick: u64) -> Result<()> {
@@ -552,11 +618,41 @@ impl Tribe {
         // Implementation to identify opportunities
         Vec::new()
     }
+
+    pub fn get_center_position(&self) -> Option<(f64, f64)> {
+        if self.population > 0 {
+            Some((self.center_position.x.into(), self.center_position.y.into()))
+        } else {
+            None
+        }
+    }
+    
+    pub fn get_territory_bounds(&self) -> Option<((f64, f64), (f64, f64))> {
+        if self.territory.is_empty() {
+            None
+        } else {
+            let min_x = self.territory.iter().map(|p| p.x).min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
+            let max_x = self.territory.iter().map(|p| p.x).max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
+            let min_y = self.territory.iter().map(|p| p.y).min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
+            let max_y = self.territory.iter().map(|p| p.y).max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
+            Some(((min_x.into(), min_y.into()), (max_x.into(), max_y.into())))
+        }
+    }
+    
+    pub fn get_territory_center(&self) -> Option<(f64, f64)> {
+        if self.territory.is_empty() {
+            None
+        } else {
+            let avg_x = self.territory.iter().map(|p| p.x).sum::<f32>() / self.territory.len() as f32;
+            let avg_y = self.territory.iter().map(|p| p.y).sum::<f32>() / self.territory.len() as f32;
+            Some((avg_x.into(), avg_y.into()))
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TribeDecision {
-    ExpandTerritory(Vec2, f32),
+    ExpandTerritory(Vec2Def, f32),
     BuildStructure(String),
     TradeWithTribe(Uuid, Vec<TradeItem>),
     DeclareWar(Uuid, String),
@@ -570,7 +666,7 @@ pub enum TribeDecision {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TribeSituation {
     pub population: usize,
-    pub resources: TribeResources,
+    pub resources: Resources,
     pub technology_level: u32,
     pub territory_size: usize,
     pub nearby_tribes: usize,
@@ -611,6 +707,18 @@ impl Government {
             council_members: Vec::new(),
             laws: Vec::new(),
             policies: Vec::new(),
+        }
+    }
+}
+
+impl Resources {
+    pub fn new() -> Self {
+        Self {
+            food: 0.0,
+            water: 0.0,
+            materials: std::collections::HashMap::new(),
+            tools: Vec::new(),
+            knowledge: Vec::new(),
         }
     }
 }

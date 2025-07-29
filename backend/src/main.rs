@@ -69,46 +69,32 @@ async fn main() -> Result<()> {
         info!("Initial humanoids spawned");
     }
     
-    // Start WebSocket server if enabled
-    if args.websocket {
-        let ws_server = WebSocketServer::new(config.websocket, simulation.clone());
-        let ws_handle = tokio::spawn(async move {
-            if let Err(e) = ws_server.start().await {
-                error!("WebSocket server failed: {}", e);
-            }
-        });
-        
-        info!("WebSocket server started on {}:{}", config.websocket.host, config.websocket.port);
-        
-        // Run simulation in background
-        let sim_handle = {
-            let simulation = simulation.clone();
-            tokio::spawn(async move {
-                let mut sim = simulation.write().await;
-                if let Err(e) = sim.run().await {
-                    error!("Simulation failed: {}", e);
-                }
-            })
-        };
-        
-        // Wait for both to complete
-        tokio::try_join!(sim_handle, ws_handle)?;
-    } else {
-        // Run simulation without WebSocket
-        let mut sim = simulation.write().await;
-        info!("Starting autonomous civilization evolution simulation...");
-        info!("Press Ctrl+C to stop the simulation");
-        
-        match sim.run().await {
-            Ok(_) => {
-                info!("Simulation completed successfully");
-            }
-            Err(e) => {
+    // Start WebSocket server
+    let websocket_config = config.websocket.clone();
+    let websocket_server = WebSocketServer::new(websocket_config, simulation.clone());
+    
+    info!("Starting WebSocket server on {}:{}", config.websocket.host, config.websocket.port);
+    
+    // Run simulation in background
+    let sim_handle = {
+        let simulation = simulation.clone();
+        tokio::spawn(async move {
+            let mut sim = simulation.write().await;
+            if let Err(e) = sim.run().await {
                 error!("Simulation failed: {}", e);
-                return Err(e);
             }
+        })
+    };
+    
+    // Start WebSocket server
+    let ws_handle = tokio::spawn(async move {
+        if let Err(e) = websocket_server.start().await {
+            error!("WebSocket server failed: {}", e);
         }
-    }
+    });
+    
+    // Wait for both to complete
+    tokio::try_join!(sim_handle, ws_handle)?;
     
     Ok(())
 }

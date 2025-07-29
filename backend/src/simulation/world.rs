@@ -3,13 +3,14 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use glam::Vec2;
 use tracing::{debug, info};
+use std::collections::HashMap;
 
 use crate::config::WorldConfig;
 use super::humanoid::Humanoid;
 use super::tribe::Tribe;
 use super::events::Event;
-use super::terrain::Terrain;
-use super::resources::Resource;
+use super::terrain::{Terrain, Vec2Def};
+use super::resources::{Resource, ResourceManager};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct World {
@@ -57,8 +58,8 @@ pub struct WorldTime {
 pub struct Building {
     pub id: Uuid,
     pub building_type: BuildingType,
-    pub position: Vec2,
-    pub size: Vec2,
+    pub position: Vec2Def,
+    pub size: Vec2Def,
     pub quality: f32,
     pub durability: f32,
     pub owner_id: Option<Uuid>,
@@ -84,8 +85,8 @@ pub enum BuildingType {
 pub struct Structure {
     pub id: Uuid,
     pub structure_type: StructureType,
-    pub position: Vec2,
-    pub size: Vec2,
+    pub position: Vec2Def,
+    pub size: Vec2Def,
     pub quality: f32,
     pub durability: f32,
     pub builder_id: Option<Uuid>,
@@ -107,7 +108,7 @@ impl World {
     pub fn new(config: &WorldConfig) -> Result<Self> {
         Ok(Self {
             config: config.clone(),
-            terrain: Terrain::new(config.world_size.0, config.world_size.1),
+            terrain: Terrain::new(config.world_size.0, config.world_size.1, config.terrain_seed),
             resources: Vec::new(),
             humanoids: Vec::new(),
             tribes: Vec::new(),
@@ -151,7 +152,7 @@ impl World {
         Ok(())
     }
     
-    pub fn get_resources_near(&self, position: Vec2, max_distance: f32) -> Vec<&Resource> {
+    pub fn get_resources_near(&self, position: Vec2Def, max_distance: f32) -> Vec<&Resource> {
         self.resources
             .iter()
             .filter(|resource| {
@@ -169,7 +170,7 @@ impl World {
         self.humanoids.iter_mut().find(|h| h.id == id)
     }
     
-    pub fn get_humanoids_near(&self, position: Vec2, max_distance: f32) -> Vec<&Humanoid> {
+    pub fn get_humanoids_near(&self, position: Vec2Def, max_distance: f32) -> Vec<&Humanoid> {
         self.humanoids
             .iter()
             .filter(|humanoid| {
@@ -250,7 +251,7 @@ impl World {
                         "tribe_formation",
                         &format!("A new tribe forms with {} members", group.len()),
                         group.iter().map(|h| h.id).collect(),
-                        Some((group[0].position.x, group[0].position.y)),
+                        Some((group[0].position.x.into(), group[0].position.y.into())),
                         0.8,
                         tick,
                     ));
@@ -278,7 +279,7 @@ impl World {
                         "technological_breakthrough",
                         &format!("{} makes a major technological breakthrough", humanoid.name),
                         vec![humanoid.id],
-                        Some((humanoid.position.x, humanoid.position.y)),
+                        Some((humanoid.position.x.into(), humanoid.position.y.into())),
                         0.9,
                         tick,
                     ));
@@ -309,7 +310,7 @@ impl World {
                             "tribe_conflict",
                             &format!("Conflict erupts between {} and {}", tribe1.name, tribe2.name),
                             vec![tribe1.id, tribe2.id],
-                            Some(((tribe1.center_position + tribe2.center_position) * 0.5).into()),
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
                             0.8,
                             tick,
                         ));
@@ -610,14 +611,9 @@ impl WorldTime {
     
     pub fn update(&mut self, tick: u64) {
         self.tick = tick;
-        
-        // 24 ticks per day
-        let day_tick = tick % 24;
-        self.time_of_day = day_tick as f32 / 24.0;
-        self.is_day = day_tick >= 6 && day_tick <= 18;
-        
-        // Update day and year
-        self.day = (tick / 24) % 365 + 1;
-        self.year = (tick / 24 / 365) + 1;
+        self.day = ((tick / 24) % 365 + 1) as u32;
+        self.year = ((tick / 24 / 365) + 1) as u32;
+        self.is_day = (tick / 12) % 2 == 0;
+        self.time_of_day = ((tick % 24) as f32) / 24.0;
     }
 }

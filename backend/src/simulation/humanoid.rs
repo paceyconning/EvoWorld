@@ -2,15 +2,35 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use rand::Rng;
-use glam::Vec2;
+use rand::prelude::*;
+use rand::prelude::SliceRandom;
 use tracing::debug;
 use tracing::info;
 use std::collections::HashSet;
 use super::behavior::TechMilestone;
 
+use super::terrain::Vec2Def;
+use super::behavior::{Action, BehaviorTree};
+use super::resources::{ResourceType, Inventory, Knowledge, Tool, ToolType, KnowledgeType};
 use crate::config::Config;
 use super::events::Event;
-use super::behavior::{BehaviorTree, Action};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Skill {
+    pub name: String,
+    pub level: f32,
+    pub experience: f32,
+    pub category: SkillCategory,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum SkillCategory {
+    Physical,
+    Mental,
+    Social,
+    Technical,
+    Creative,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Culture {
@@ -22,25 +42,32 @@ pub struct Culture {
 pub struct Humanoid {
     pub id: Uuid,
     pub name: String,
-    pub position: Vec2,
+    pub position: Vec2Def,
     pub age: u32,
     pub health: f32,
-    pub hunger: f32,
     pub energy: f32,
+    pub hunger: f32,
+    pub thirst: f32,
     pub intelligence: f32,
     pub social_skills: f32,
     pub technical_skills: f32,
+    pub strength: f32,
     pub personality: Personality,
-    pub memories: Vec<Memory>,
-    pub current_behavior: Option<String>,
-    pub tribe_id: Option<Uuid>,
     pub inventory: Inventory,
+    pub knowledge: Vec<Knowledge>,
+    pub skills: Vec<Skill>,
     pub relationships: Vec<Relationship>,
+    pub memories: Vec<Memory>,
     pub goals: Vec<Goal>,
     pub fears: Vec<Fear>,
     pub desires: Vec<Desire>,
     pub culture: Option<Culture>,
     pub achieved_tech: HashSet<TechMilestone>,
+    pub current_behavior: Option<String>,
+    pub behavior_tree: BehaviorTree,
+    pub tribe_id: Option<Uuid>,
+    pub is_alive: bool,
+    pub generation: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,74 +91,6 @@ pub struct Memory {
     pub importance: f32,        // 0.0 to 1.0
     pub timestamp: u64,
     pub associated_humanoids: Vec<Uuid>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Inventory {
-    pub food: f32,
-    pub water: f32,
-    pub tools: Vec<Tool>,
-    pub materials: Vec<Material>,
-    pub knowledge: Vec<Knowledge>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Tool {
-    pub name: String,
-    pub quality: f32,
-    pub durability: f32,
-    pub tool_type: ToolType,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ToolType {
-    Hunting,
-    Gathering,
-    Building,
-    Crafting,
-    Farming,
-    Weapon,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Material {
-    pub name: String,
-    pub quantity: f32,
-    pub quality: f32,
-    pub material_type: MaterialType,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum MaterialType {
-    Wood,
-    Stone,
-    Metal,
-    Clay,
-    Fiber,
-    Hide,
-    Bone,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Knowledge {
-    pub name: String,
-    pub level: f32,
-    pub knowledge_type: KnowledgeType,
-    pub discovery_tick: u64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum KnowledgeType {
-    Hunting,
-    Gathering,
-    Building,
-    Crafting,
-    Farming,
-    Medicine,
-    Philosophy,
-    Science,
-    Art,
-    Religion,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -223,7 +182,7 @@ pub enum DesireType {
 }
 
 impl Humanoid {
-    pub fn new(name: String, position: Vec2, config: &Config) -> Self {
+    pub fn new(name: String, position: Vec2Def, config: &Config) -> Self {
         let mut rng = rand::thread_rng();
         let primitive_cultures = vec![
             Culture {
@@ -246,22 +205,29 @@ impl Humanoid {
             position,
             age: 0,
             health: 100.0,
-            hunger: 0.0,
             energy: 100.0,
+            hunger: 0.0,
+            thirst: 0.0,
             intelligence: rng.gen_range(0.5..1.5),
-            social_skills: rng.gen_range(0.5..1.5),
-            technical_skills: rng.gen_range(0.5..1.5),
+            strength: rng.gen_range(0.5..1.5),
             personality: Personality::random(),
-            memories: Vec::new(),
-            current_behavior: None,
-            tribe_id: None,
             inventory: Inventory::new(),
+            knowledge: Vec::new(),
+            skills: Vec::new(),
             relationships: Vec::new(),
+            memories: Vec::new(),
             goals: Vec::new(),
             fears: Vec::new(),
             desires: Vec::new(),
             culture,
             achieved_tech: HashSet::new(),
+            current_behavior: None,
+            behavior_tree: BehaviorTree::new(),
+            tribe_id: None,
+            is_alive: true,
+            generation: 0,
+            social_skills: 0.0,
+            technical_skills: 0.0,
         }
     }
     
@@ -275,7 +241,7 @@ impl Humanoid {
             let name = format!("Humanoid_{}", i);
             let x = rng.gen_range(0.0..config.world.world_size.0 as f32);
             let y = rng.gen_range(0.0..config.world.world_size.1 as f32);
-            let position = Vec2::new(x, y);
+            let position = Vec2Def::new(x, y);
             
             let humanoid = Self::new(name, position, config);
             humanoids.push(humanoid);
@@ -335,9 +301,9 @@ impl Humanoid {
                 self.create_tool(tool_type);
                 emotional_impact = 0.1;
             }
-            Action::Build(building_type) => {
-                self.build(building_type);
-                emotional_impact = 0.1;
+            Action::Build(ref building_type) => {
+                // TODO: Implement building logic
+                debug!("[ACTION] {} builds {}", self.name, building_type);
             }
             Action::Attack(target_id) => {
                 if let Err(e) = self.attack(target_id, world) {
@@ -347,13 +313,9 @@ impl Humanoid {
                     emotional_impact = 0.05;
                 }
             }
-            Action::Trade(partner_id, items) => {
-                if let Err(e) = self.trade(partner_id, items, world) {
-                    outcome = format!("fail: {}", e);
-                    emotional_impact = -0.1;
-                } else {
-                    emotional_impact = 0.1;
-                }
+            Action::Trade(partner_id, ref items) => {
+                // TODO: Implement trade logic
+                debug!("[ACTION] {} trades with {}", self.name, partner_id);
             }
             Action::Explore => {
                 debug!("Humanoid {} is exploring", self.name);
@@ -398,7 +360,7 @@ impl Humanoid {
                 "near_death",
                 &format!("{} is near death", self.name),
                 vec![self.id],
-                Some((self.position.x, self.position.y)),
+                Some((self.position.x.into(), self.position.y.into())),
                 0.8,
                 tick,
             )));
@@ -409,7 +371,7 @@ impl Humanoid {
                 "breakthrough",
                 &format!("{} has a technological breakthrough", self.name),
                 vec![self.id],
-                Some((self.position.x, self.position.y)),
+                Some((self.position.x.into(), self.position.y.into())),
                 0.9,
                 tick,
             )));
@@ -418,7 +380,7 @@ impl Humanoid {
         Ok(None)
     }
     
-    fn gather_resource(&mut self, resource_type: super::resources::ResourceType, world: &super::world::World) -> Result<()> {
+    fn gather_resource(&mut self, resource_type: ResourceType, world: &super::world::World) -> Result<()> {
         // Find nearby resources
         let nearby_resources = world.get_resources_near(self.position, 10.0);
         
@@ -491,8 +453,9 @@ impl Humanoid {
         } else {
             self.inventory.knowledge.push(Knowledge {
                 name: format!("{:?}", knowledge_type),
-                level: 0.1,
                 knowledge_type,
+                level: 1.0,
+                description: format!("Basic knowledge of {:?}", knowledge_type),
                 discovery_tick: 0, // Will be set by caller
             });
         }
@@ -575,7 +538,7 @@ impl Humanoid {
         if rel.map_or(0.0, |r| r.strength) < 0.2 { return None; }
         // Mix genetics (traits, intelligence, skills) with mutation
         let mut rng = rand::thread_rng();
-        let mix = |a: f32, b: f32| ((a + b) / 2.0 + rng.gen_range(-0.05..0.05)).clamp(0.0, 2.0);
+        let mut mix = |a: f32, b: f32| ((a + b) / 2.0 + rng.gen_range(-0.05..0.05)).clamp(0.0, 2.0);
         let child_personality = Personality {
             curiosity: mix(self.personality.curiosity, partner.personality.curiosity),
             aggression: mix(self.personality.aggression, partner.personality.aggression),
@@ -597,17 +560,24 @@ impl Humanoid {
             position: child_position,
             age: 0,
             health: 100.0,
-            hunger: 0.0,
             energy: 100.0,
+            hunger: 0.0,
+            thirst: 0.0,
             intelligence: child_intelligence,
-            social_skills: child_social_skills,
-            technical_skills: child_technical_skills,
+            strength: child_social_skills,
             personality: child_personality,
-            memories: Vec::new(),
-            current_behavior: None,
-            tribe_id: self.tribe_id.or(partner.tribe_id),
             inventory: Inventory::new(),
+            knowledge: Vec::new(),
+            skills: Vec::new(),
             relationships: Vec::new(),
+            current_behavior: None,
+            behavior_tree: BehaviorTree::new(),
+            tribe_id: self.tribe_id.or(partner.tribe_id),
+            is_alive: true,
+            generation: 0,
+            social_skills: 0.0,
+            technical_skills: 0.0,
+            memories: Vec::new(),
             goals: Vec::new(),
             fears: Vec::new(),
             desires: Vec::new(),
@@ -656,7 +626,7 @@ impl Humanoid {
     }
 
     /// Attempt to discover a new tech milestone if requirements are met, with creativity bonus
-    pub fn try_discover_tech(&mut self, milestone: TechMilestone, available_resources: &[super::resources::ResourceType]) {
+    pub fn try_discover_tech(&mut self, milestone: TechMilestone, available_resources: &[ResourceType]) {
         use super::behavior::TECH_TREE;
         if self.achieved_tech.contains(&milestone) { return; }
         if let Some((_, reqs)) = TECH_TREE.iter().find(|(m, _)| **m == milestone) {
@@ -686,6 +656,27 @@ impl Humanoid {
             tracing::info!("[CREATIVITY] {} had a creative breakthrough at tick {}", self.name, tick);
         }
     }
+
+    pub fn apply_behavior_result(&mut self, result: BehaviorResult, world: &super::world::World, tick: u64) -> Result<()> {
+        match result {
+            BehaviorResult::Success => {
+                debug!("Humanoid {} successfully completed action", self.name);
+            }
+            BehaviorResult::Failure => {
+                debug!("Humanoid {} failed to complete action", self.name);
+            }
+            BehaviorResult::Running => {
+                debug!("Humanoid {} action still running", self.name);
+            }
+        }
+        Ok(())
+    }
+
+    pub fn try_reproduction(&mut self, world: &super::world::World, tick: u64) -> Result<Option<Humanoid>> {
+        // TODO: Implement reproduction logic
+        // For now, return None to indicate no child was created
+        Ok(None)
+    }
 }
 
 impl Personality {
@@ -701,89 +692,6 @@ impl Personality {
             ambition: rng.gen_range(0.0..1.0),
             empathy: rng.gen_range(0.0..1.0),
             adaptability: rng.gen_range(0.0..1.0),
-        }
-    }
-}
-
-impl Inventory {
-    pub fn new() -> Self {
-        Self {
-            food: 10.0,
-            water: 10.0,
-            tools: Vec::new(),
-            materials: Vec::new(),
-            knowledge: Vec::new(),
-        }
-    }
-    
-    pub fn add_resource(&mut self, resource_type: super::resources::ResourceType, amount: f32) {
-        match resource_type {
-            super::resources::ResourceType::Food => self.inventory.food += amount,
-            super::resources::ResourceType::Water => self.inventory.water += amount,
-            super::resources::ResourceType::Wood => self.add_material(MaterialType::Wood, amount),
-            super::resources::ResourceType::Stone => self.add_material(MaterialType::Stone, amount),
-            super::resources::ResourceType::Metal => self.add_material(MaterialType::Metal, amount),
-            super::resources::ResourceType::Clay => self.add_material(MaterialType::Clay, amount),
-            super::resources::ResourceType::Fiber => self.add_material(MaterialType::Fiber, amount),
-            super::resources::ResourceType::Hide => self.add_material(MaterialType::Hide, amount),
-            super::resources::ResourceType::Bone => self.add_material(MaterialType::Bone, amount),
-            super::resources::ResourceType::Herbs => {
-                // TODO: Add herbs to inventory
-                debug!("Added {} herbs to inventory", amount);
-            }
-            super::resources::ResourceType::Berries => {
-                // TODO: Add berries to inventory
-                debug!("Added {} berries to inventory", amount);
-            }
-            super::resources::ResourceType::Fish => {
-                // TODO: Add fish to inventory
-                debug!("Added {} fish to inventory", amount);
-            }
-            super::resources::ResourceType::Game => {
-                // TODO: Add game to inventory
-                debug!("Added {} game to inventory", amount);
-            }
-            super::resources::ResourceType::Minerals => {
-                // TODO: Add minerals to inventory
-                debug!("Added {} minerals to inventory", amount);
-            }
-            super::resources::ResourceType::PreciousMetals => {
-                // TODO: Add precious metals to inventory
-                debug!("Added {} precious metals to inventory", amount);
-            }
-            super::resources::ResourceType::Gems => {
-                // TODO: Add gems to inventory
-                debug!("Added {} gems to inventory", amount);
-            }
-            super::resources::ResourceType::Oil => {
-                // TODO: Add oil to inventory
-                debug!("Added {} oil to inventory", amount);
-            }
-            super::resources::ResourceType::Coal => {
-                // TODO: Add coal to inventory
-                debug!("Added {} coal to inventory", amount);
-            }
-            super::resources::ResourceType::Salt => {
-                // TODO: Add salt to inventory
-                debug!("Added {} salt to inventory", amount);
-            }
-            super::resources::ResourceType::Dyes => {
-                // TODO: Add dyes to inventory
-                debug!("Added {} dyes to inventory", amount);
-            }
-        }
-    }
-    
-    fn add_material(&mut self, material_type: MaterialType, amount: f32) {
-        if let Some(material) = self.materials.iter_mut().find(|m| m.material_type == material_type) {
-            material.quantity += amount;
-        } else {
-            self.materials.push(Material {
-                name: format!("{:?}", material_type),
-                quantity: amount,
-                quality: 1.0,
-                material_type,
-            });
         }
     }
 }

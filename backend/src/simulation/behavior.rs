@@ -7,7 +7,8 @@ use tracing::debug;
 use crate::config::AIConfig;
 use super::humanoid::Humanoid;
 use super::world::World;
-use super::resources::ResourceType;
+use super::resources::{ResourceType, KnowledgeType, ToolType};
+use super::terrain::Vec2Def;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BehaviorTree {
@@ -26,22 +27,22 @@ pub enum BehaviorNode {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Action {
-    Move(Vec2, f32),                    // direction, distance
-    Gather(ResourceType),
-    Eat(f32),                          // amount
-    Drink(f32),                        // amount
-    Rest(f32),                         // duration
-    Socialize(uuid::Uuid),
-    Learn(super::humanoid::KnowledgeType),
-    Create(super::humanoid::ToolType),
-    Build(String),                     // building type
-    Attack(uuid::Uuid),
-    Trade(uuid::Uuid, Vec<String>),    // partner_id, items
-    Explore,
-    Defend,
-    Flee,
-    Procreate(uuid::Uuid),             // partner_id
-    Idle,
+    Move(Vec2Def, f32),                    // direction, distance
+    Gather(ResourceType),                  // resource type
+    Eat(f32),                             // amount
+    Drink(f32),                           // amount
+    Rest(f32),                            // duration
+    Socialize(uuid::Uuid),                      // target humanoid
+    Learn(KnowledgeType),                 // knowledge type
+    Create(ToolType),                     // tool type
+    Build(String),                        // building type
+    Attack(uuid::Uuid),                         // target humanoid
+    Trade(uuid::Uuid, Vec<String>),             // partner, items
+    Explore,                              // explore surroundings
+    Defend,                               // defend against threats
+    Flee,                                 // flee from danger
+    Procreate(uuid::Uuid),                      // partner
+    Idle,                                 // do nothing
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -76,7 +77,7 @@ pub enum DecoratorType {
     Random(Box<BehaviorNode>, f32),    // node, probability
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BehaviorResult {
     Success,
     Failure,
@@ -157,6 +158,13 @@ pub static TECH_TREE: &[(&TechMilestone, &[ResourceType])] = &[
 ];
 
 impl BehaviorTree {
+    pub fn new() -> Self {
+        Self {
+            root: BehaviorNode::Action(Action::Idle),
+            complexity: 1,
+        }
+    }
+    
     pub fn new_for_humanoid(humanoid: &Humanoid, ai_config: &AIConfig) -> Self {
         let root = Self::create_humanoid_behavior_tree(humanoid, ai_config);
         
@@ -245,7 +253,7 @@ impl BehaviorTree {
             DecoratorType::Failer => Ok(BehaviorResult::Failure),
             DecoratorType::Random(_, probability) => {
                 let mut rng = rand::thread_rng();
-                if rng.gen_bool(*probability) {
+                if rng.gen_bool((*probability).into()) {
                     Ok(result)
                 } else {
                     Ok(BehaviorResult::Failure)
@@ -323,7 +331,7 @@ impl BehaviorTree {
         // Learning behaviors
         if humanoid.intelligence > 1.0 {
             root_children.push(BehaviorNode::Decorator(
-                Box::new(BehaviorNode::Action(Action::Learn(super::humanoid::KnowledgeType::Science))),
+                Box::new(BehaviorNode::Action(Action::Learn(KnowledgeType::Science))),
                 DecoratorType::Random(Box::new(BehaviorNode::Action(Action::Idle)), 0.1),
             ));
         }
@@ -331,7 +339,7 @@ impl BehaviorTree {
         // Creative behaviors
         if humanoid.personality.creativity > 0.7 {
             root_children.push(BehaviorNode::Decorator(
-                Box::new(BehaviorNode::Action(Action::Create(super::humanoid::ToolType::Crafting))),
+                Box::new(BehaviorNode::Action(Action::Create(ToolType::Crafting))),
                 DecoratorType::Random(Box::new(BehaviorNode::Action(Action::Idle)), 0.15),
             ));
         }
@@ -402,20 +410,21 @@ impl Action {
     pub fn get_energy_cost(&self) -> f32 {
         match self {
             Action::Move(_, distance) => distance * 0.1,
-            Action::Gather(_) => 5.0,
-            Action::Eat(_) => 1.0,
-            Action::Drink(_) => 1.0,
-            Action::Rest(_) => -5.0, // Rest restores energy
-            Action::Socialize(_) => 2.0,
-            Action::Learn(_) => 3.0,
-            Action::Create(_) => 4.0,
-            Action::Build(_) => 6.0,
-            Action::Attack(_) => 8.0,
-            Action::Trade(_, _) => 2.0,
-            Action::Explore => 3.0,
-            Action::Defend => 5.0,
-            Action::Flee => 10.0,
-            Action::Idle => 0.5,
+            Action::Gather(_) => 1.0,
+            Action::Eat(_) => 0.5,
+            Action::Drink(_) => 0.3,
+            Action::Rest(_) => 0.2,
+            Action::Socialize(_) => 1.5,
+            Action::Learn(_) => 2.0,
+            Action::Create(_) => 3.0,
+            Action::Build(_) => 5.0,
+            Action::Attack(_) => 2.0,
+            Action::Trade(_, _) => 1.0,
+            Action::Explore => 1.0,
+            Action::Defend => 1.5,
+            Action::Flee => 0.5,
+            Action::Procreate(_) => 4.0,
+            Action::Idle => 0.1,
         }
     }
 }

@@ -4,6 +4,7 @@ use noise::{NoiseFn, Perlin};
 use glam::Vec2;
 use tracing::debug;
 use crate::config::WorldConfig;
+use std::ops::{Add, Sub, Mul, Div, AddAssign};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct Vec2Def {
@@ -11,18 +12,86 @@ pub struct Vec2Def {
     pub y: f32,
 }
 
+impl Vec2Def {
+    pub fn new(x: f32, y: f32) -> Self {
+        Self { x, y }
+    }
+    
+    pub fn length(&self) -> f32 {
+        (self.x * self.x + self.y * self.y).sqrt()
+    }
+}
+
+impl Add for Vec2Def {
+    type Output = Self;
+    
+    fn add(self, other: Self) -> Self {
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
+}
+
+impl AddAssign for Vec2Def {
+    fn add_assign(&mut self, other: Self) {
+        self.x += other.x;
+        self.y += other.y;
+    }
+}
+
+impl Sub for Vec2Def {
+    type Output = Self;
+    
+    fn sub(self, other: Self) -> Self {
+        Self {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
+    }
+}
+
+impl Mul<f32> for Vec2Def {
+    type Output = Self;
+    
+    fn mul(self, scalar: f32) -> Self {
+        Self {
+            x: self.x * scalar,
+            y: self.y * scalar,
+        }
+    }
+}
+
+impl Div<f32> for Vec2Def {
+    type Output = Self;
+    
+    fn div(self, scalar: f32) -> Self {
+        Self {
+            x: self.x / scalar,
+            y: self.y / scalar,
+        }
+    }
+}
+
 impl From<Vec2> for Vec2Def {
     fn from(v: Vec2) -> Self {
         Self { x: v.x, y: v.y }
     }
 }
+
 impl From<Vec2Def> for Vec2 {
     fn from(v: Vec2Def) -> Self {
         Vec2::new(v.x, v.y)
     }
 }
 
-#[derive(Debug, Clone)]
+impl Default for Vec2Def {
+    fn default() -> Self {
+        Self { x: 0.0, y: 0.0 }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct TerrainNoise {
     pub elevation_noise: Perlin,
     pub moisture_noise: Perlin,
@@ -42,13 +111,98 @@ impl TerrainNoise {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum BiomeType {
+    Ocean,
+    Beach,
+    Desert,
+    Jungle,
+    Grassland,
+    Forest,
+    Swamp,
+    Tundra,
+    Mountain,
+    Arctic,
+    River,
+    Lake,
+    Volcanic,
+}
+
+impl Default for BiomeType {
+    fn default() -> Self {
+        BiomeType::Grassland
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum MineralType {
+    Iron,
+    Copper,
+    Gold,
+    // Add more as needed
+}
+
+impl Default for MineralType {
+    fn default() -> Self {
+        MineralType::Iron
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum TerrainStructureType {
+    Cave,
+    Waterfall,
+    HotSpring,
+    RockFormation,
+    // Add more as needed
+}
+
+impl Default for TerrainStructureType {
+    fn default() -> Self {
+        TerrainStructureType::RockFormation
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct MineralDeposit {
+    pub mineral_type: MineralType,
+    pub quantity: f32,
+    pub quality: f32,
+    pub depth: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct TerrainStructure {
+    pub structure_type: TerrainStructureType,
+    pub position: Vec2Def,
+    pub size: Vec2Def,
+    pub age: u32,
+    pub condition: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct TerrainTile {
+    pub x: u32,
+    pub y: u32,
+    pub elevation: f32,
+    pub moisture: f32,
+    pub temperature: f32,
+    pub biome_type: BiomeType,
+    pub fertility: f32,
+    pub vegetation_density: f32,
+    pub water_level: f32,
+    pub mineral_deposits: Vec<MineralDeposit>,
+    pub structures: Vec<TerrainStructure>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Terrain {
     pub width: u32,
     pub height: u32,
     pub tiles: Vec<TerrainTile>,
     pub seed: u64,
-    // pub noise_generator: TerrainNoise, // REMOVE from serialization
+    #[serde(skip)]
+    pub noise_generator: TerrainNoise,
 }
 
 impl Terrain {
@@ -59,10 +213,9 @@ impl Terrain {
             height,
             tiles: Vec::new(),
             seed,
-            // noise_generator,
+            noise_generator,
         }
     }
-    // When needed, reconstruct noise_generator from seed
     
     pub fn generate(&mut self) -> Result<()> {
         debug!("Generating terrain {}x{} with seed {}", self.width, self.height, self.seed);
@@ -379,7 +532,7 @@ impl Terrain {
         Ok(())
     }
     
-    pub fn update_effects(&mut self, weather: &super::world::Weather, tick: u64) -> Result<()> {
+    pub fn update_effects(&mut self, weather: &super::world::Weather, _tick: u64) -> Result<()> {
         // Update terrain based on weather conditions
         for tile in &mut self.tiles {
             // Temperature effects
@@ -420,22 +573,42 @@ impl Terrain {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TerrainGenerator {
     pub seed: u64,
-    // pub noise_generator: TerrainNoise, // REMOVE from serialization
 }
 
 impl TerrainGenerator {
     pub fn new(seed: u64) -> Self {
         Self {
             seed,
-            // noise_generator: TerrainNoise::new(seed), // REMOVE from serialization
         }
     }
     
     pub fn generate_terrain(&self, config: &WorldConfig) -> Result<Terrain> {
         let mut terrain = Terrain::new(config.world_size.0, config.world_size.1, self.seed);
-        // terrain.seed = self.seed; // REMOVE from serialization
-        // terrain.noise_generator = self.noise_generator.clone(); // REMOVE from serialization
         terrain.generate()?;
         Ok(terrain)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::WorldConfig;
+
+    #[test]
+    fn test_terrain_generator_basic() {
+        // Minimal config for testing
+        let config = WorldConfig {
+            world_size: (8, 8),
+            terrain_seed: 42,
+            // Add other required fields with dummy values if needed
+            ..Default::default()
+        };
+        let generator = TerrainGenerator::new(config.terrain_seed);
+        let terrain_result = generator.generate_terrain(&config);
+        assert!(terrain_result.is_ok(), "Terrain generation should succeed");
+        let terrain = terrain_result.unwrap();
+        assert_eq!(terrain.width, 8);
+        assert_eq!(terrain.height, 8);
+        assert_eq!(terrain.tiles.len(), 64);
     }
 }

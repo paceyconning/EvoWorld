@@ -1,75 +1,72 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use glam::Vec2;
 use rand::Rng;
 use tracing::debug;
 
 use crate::config::WorldConfig;
+use super::terrain::Vec2Def;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-pub struct Vec2Def {
-    pub x: f32,
-    pub y: f32,
-}
-
-impl From<Vec2> for Vec2Def {
-    fn from(v: Vec2) -> Self {
-        Self { x: v.x, y: v.y }
-    }
-}
-impl From<Vec2Def> for Vec2 {
-    fn from(v: Vec2Def) -> Self {
-        Vec2::new(v.x, v.y)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ResourceType {
-    // Food resources
     Food,
     Water,
-    Herbs,
-    Berries,
-    Fish,
-    Game,
-    
-    // Material resources
     Wood,
     Stone,
-    Metal, // Generic, for legacy support
-    Clay,
-    Fiber,
-    Hide,
-    Bone,
-    
-    // Mineral resources
-    Minerals,
-    PreciousMetals,
-    Gems,
+    Iron,
+    Copper,
+    Gold,
+    Silver,
+    Aluminum,
+    Titanium,
     Coal,
     Oil,
+    Hide,
+    Fiber,
+    Clay,
+    Sand,
     Salt,
+    Herbs,
+    Berries,
+    Meat,
+    Fish,
+    Grain,
+    Fruit,
+    Vegetables,
+    Nuts,
+    Honey,
+    Milk,
+    Eggs,
+    Wool,
+    Silk,
     Dyes,
-    
-    // Advanced/real-world resources for tech progression
-    Copper,         // Needed for early metallurgy, electronics
-    Gold,           // Electronics, currency, advanced tech
-    Silver,         // Electronics, currency
-    Tin,            // Bronze age
-    Lead,           // Industrial, batteries
-    Zinc,           // Alloys, batteries
-    Nickel,         // Alloys, stainless steel
-    Aluminum,       // Lightweight structures
-    Silicon,        // Electronics, semiconductors
-    Uranium,        // Nuclear power
-    RareEarths,     // Modern electronics, green tech
-    Phosphorus,     // Fertilizer, chemistry
-    Sulfur,         // Chemistry, industry
-    Lithium,        // Batteries
-    Cobalt,         // Batteries, alloys
-    Platinum,       // Catalysts, electronics
-    // ... add more as needed for future tech tree
+    Spices,
+    Gems,
+    Obsidian,
+    Flint,
+    Bone,
+    Shell,
+    Coral,
+    Pearls,
+    Amber,
+    Jade,
+    // Additional variants referenced in the code
+    Tin,
+    Lead,
+    Zinc,
+    Nickel,
+    Silicon,
+    Uranium,
+    RareEarths,
+    Phosphorus,
+    Sulfur,
+    Lithium,
+    Cobalt,
+    Platinum,
+    Metal,
+    Game,
+    Minerals,
+    PreciousMetals,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -85,6 +82,8 @@ pub struct Resource {
     pub discovered_by: Option<Uuid>,
     pub depletion_rate: f32,
     pub max_quantity: f32,
+    pub current_respawn_timer: u64,
+    pub respawn_time: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,10 +104,140 @@ pub struct ResourceDistribution {
     pub renewable_rate: f32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Inventory {
+    pub food: f32,
+    pub water: f32,
+    pub tools: Vec<Tool>,
+    pub materials: Vec<Material>,
+    pub knowledge: Vec<Knowledge>,
+}
+
+impl Inventory {
+    pub fn new() -> Self {
+        Self {
+            food: 10.0,
+            water: 10.0,
+            tools: Vec::new(),
+            materials: Vec::new(),
+            knowledge: Vec::new(),
+        }
+    }
+    
+    pub fn add_resource(&mut self, resource_type: ResourceType, amount: f32) {
+        match resource_type {
+            ResourceType::Food => self.food += amount,
+            ResourceType::Water => self.water += amount,
+            _ => {
+                // Convert ResourceType to MaterialType for storage
+                let material_type = match resource_type {
+                    ResourceType::Wood => MaterialType::Wood,
+                    ResourceType::Stone => MaterialType::Stone,
+                    ResourceType::Iron | ResourceType::Copper | ResourceType::Gold | ResourceType::Silver | ResourceType::Aluminum | ResourceType::Titanium | ResourceType::Tin | ResourceType::Lead | ResourceType::Zinc | ResourceType::Nickel | ResourceType::Silicon | ResourceType::Uranium | ResourceType::RareEarths | ResourceType::Phosphorus | ResourceType::Sulfur | ResourceType::Lithium | ResourceType::Cobalt | ResourceType::Platinum => MaterialType::Metal,
+                    ResourceType::Clay => MaterialType::Clay,
+                    ResourceType::Hide => MaterialType::Hide,
+                    ResourceType::Fiber => MaterialType::Fiber,
+                    ResourceType::Bone => MaterialType::Bone,
+                    ResourceType::Shell => MaterialType::Shell,
+                    ResourceType::Obsidian => MaterialType::Obsidian,
+                    ResourceType::Flint => MaterialType::Flint,
+                    _ => MaterialType::Stone, // Default fallback
+                };
+                
+                // Add to materials
+                if let Some(material) = self.materials.iter_mut().find(|m| m.material_type == material_type) {
+                    material.quantity += amount;
+                } else {
+                    // Create new material entry
+                    self.materials.push(Material {
+                        material_type,
+                        quantity: amount,
+                        quality: 1.0,
+                    });
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Tool {
+    pub name: String,
+    pub tool_type: ToolType,
+    pub quality: f32,
+    pub durability: f32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum ToolType {
+    Axe,
+    Pickaxe,
+    Knife,
+    Hammer,
+    Spear,
+    Bow,
+    Arrow,
+    Pot,
+    Basket,
+    Rope,
+    Crafting,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Material {
+    pub material_type: MaterialType,
+    pub quantity: f32,
+    pub quality: f32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum MaterialType {
+    Wood,
+    Stone,
+    Metal,
+    Clay,
+    Leather,
+    Fiber,
+    Bone,
+    Shell,
+    Obsidian,
+    Flint,
+    Hide,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Knowledge {
+    pub name: String,
+    pub knowledge_type: KnowledgeType,
+    pub level: f32,
+    pub description: String,
+    pub discovery_tick: u64,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum KnowledgeType {
+    Agriculture,
+    Hunting,
+    Toolmaking,
+    Medicine,
+    Astronomy,
+    Mathematics,
+    Engineering,
+    Philosophy,
+    Art,
+    Music,
+    Language,
+    Navigation,
+    Metallurgy,
+    Pottery,
+    Weaving,
+    Science,
+}
+
 impl Resource {
     pub fn new(
         resource_type: ResourceType,
-        position: Vec2,
+        position: Vec2Def,
         quantity: f32,
         quality: f32,
         is_renewable: bool,
@@ -119,7 +248,7 @@ impl Resource {
         Self {
             id: Uuid::new_v4(),
             resource_type,
-            position: Vec2Def::from(position),
+            position,
             quantity,
             quality,
             is_renewable,
@@ -128,19 +257,19 @@ impl Resource {
             discovered_by: None,
             depletion_rate: 0.1,
             max_quantity,
+            current_respawn_timer: 0,
+            respawn_time: 100, // Default respawn time
         }
     }
     
-    pub fn regenerate(&mut self, current_tick: u64) {
-        if !self.is_renewable || self.quantity >= self.max_quantity {
-            return;
-        }
-        
-        let ticks_since_renewal = current_tick - self.last_renewal;
-        if ticks_since_renewal >= 100 { // Renew every 100 ticks
-            let renewal_amount = self.renewal_rate * self.max_quantity * 0.01;
-            self.quantity = (self.quantity + renewal_amount).min(self.max_quantity);
-            self.last_renewal = current_tick;
+    pub fn regenerate(&mut self, tick: u64) {
+        if self.is_renewable && self.quantity <= 0.0 {
+            if self.current_respawn_timer > 0 {
+                self.current_respawn_timer -= 1;
+            } else {
+                self.quantity = Self::get_base_quantity(&self.resource_type);
+                self.current_respawn_timer = self.respawn_time;
+            }
         }
     }
     
@@ -160,6 +289,19 @@ impl Resource {
     
     pub fn discover(&mut self, discoverer_id: Uuid) {
         self.discovered_by = Some(discoverer_id);
+    }
+
+    fn get_base_quantity(resource_type: &ResourceType) -> f32 {
+        let mut rng = rand::thread_rng();
+        let base_quantity = match resource_type {
+            ResourceType::Food | ResourceType::Water | ResourceType::Herbs | ResourceType::Berries | ResourceType::Fish | ResourceType::Game | ResourceType::Meat | ResourceType::Grain | ResourceType::Fruit | ResourceType::Vegetables | ResourceType::Nuts | ResourceType::Honey | ResourceType::Milk | ResourceType::Eggs => rng.gen_range(1.0..10.0),
+            ResourceType::Wood | ResourceType::Stone | ResourceType::Metal | ResourceType::Clay => rng.gen_range(2.0..10.0),
+            ResourceType::Fiber | ResourceType::Hide | ResourceType::Bone => rng.gen_range(0.5..3.0),
+            ResourceType::Minerals | ResourceType::PreciousMetals | ResourceType::Gems => rng.gen_range(0.1..1.0),
+            ResourceType::Copper | ResourceType::Gold | ResourceType::Silver | ResourceType::Tin | ResourceType::Lead | ResourceType::Zinc | ResourceType::Nickel | ResourceType::Aluminum | ResourceType::Silicon | ResourceType::Uranium | ResourceType::RareEarths | ResourceType::Phosphorus | ResourceType::Sulfur | ResourceType::Lithium | ResourceType::Cobalt | ResourceType::Platinum => rng.gen_range(0.01..0.1),
+            ResourceType::Iron | ResourceType::Titanium | ResourceType::Sand | ResourceType::Salt | ResourceType::Dyes | ResourceType::Spices | ResourceType::Obsidian | ResourceType::Flint | ResourceType::Shell | ResourceType::Coral | ResourceType::Pearls | ResourceType::Amber | ResourceType::Jade | ResourceType::Wool | ResourceType::Silk | ResourceType::Coal | ResourceType::Oil => rng.gen_range(0.5..2.0),
+        };
+        base_quantity
     }
 }
 
@@ -263,11 +405,11 @@ impl ResourceManager {
         Ok(())
     }
     
-    pub fn get_resources_near(&self, position: Vec2, max_distance: f32) -> Vec<&Resource> {
+    pub fn get_resources_near(&self, position: Vec2Def, max_distance: f32) -> Vec<&Resource> {
         self.resources
             .iter()
             .filter(|resource| {
-                let distance = (resource.position.into() - position).length();
+                let distance = (resource.position - position).length();
                 distance <= max_distance
             })
             .collect()
@@ -390,10 +532,10 @@ impl ResourceManager {
         ResourceType::Food // Fallback
     }
     
-    fn generate_random_position(&self, config: &WorldConfig, rng: &mut rand::rngs::ThreadRng) -> Vec2 {
+    fn generate_random_position(&self, config: &WorldConfig, rng: &mut rand::rngs::ThreadRng) -> Vec2Def {
         let x = rng.gen_range(0.0..config.world_size.0 as f32);
         let y = rng.gen_range(0.0..config.world_size.1 as f32);
-        Vec2::new(x, y)
+        Vec2Def::new(x, y)
     }
     
     fn generate_quantity(&self, resource_type: &ResourceType, rng: &mut rand::rngs::ThreadRng) -> f32 {
@@ -412,6 +554,12 @@ impl ResourceManager {
             ResourceType::Salt | ResourceType::Dyes => rng.gen_range(0.5..2.0),
             // Advanced/real-world resources
             ResourceType::Copper | ResourceType::Gold | ResourceType::Silver | ResourceType::Tin | ResourceType::Lead | ResourceType::Zinc | ResourceType::Nickel | ResourceType::Aluminum | ResourceType::Silicon | ResourceType::Uranium | ResourceType::RareEarths | ResourceType::Phosphorus | ResourceType::Sulfur | ResourceType::Lithium | ResourceType::Cobalt | ResourceType::Platinum => rng.gen_range(0.01..0.1),
+            // Additional missing variants
+            ResourceType::Iron | ResourceType::Titanium => rng.gen_range(0.5..2.0),
+            ResourceType::Sand => rng.gen_range(0.5..3.0),
+            ResourceType::Meat | ResourceType::Grain | ResourceType::Fruit | ResourceType::Vegetables | ResourceType::Nuts | ResourceType::Honey | ResourceType::Milk | ResourceType::Eggs => rng.gen_range(1.0..8.0),
+            ResourceType::Wool | ResourceType::Silk | ResourceType::Spices => rng.gen_range(0.2..2.0),
+            ResourceType::Obsidian | ResourceType::Flint | ResourceType::Shell | ResourceType::Coral | ResourceType::Pearls | ResourceType::Amber | ResourceType::Jade => rng.gen_range(0.1..1.0),
         };
         
         base_quantity * (0.8 + rng.gen_range(0.0..0.4)) // Add some variation
@@ -496,31 +644,47 @@ impl ResourceType {
             ResourceType::Water => "Water",
             ResourceType::Wood => "Wood",
             ResourceType::Stone => "Stone",
-            ResourceType::Metal => "Metal",
-            ResourceType::Clay => "Clay",
-            ResourceType::Fiber => "Fiber",
-            ResourceType::Hide => "Hide",
-            ResourceType::Bone => "Bone",
-            ResourceType::Herbs => "Herbs",
-            ResourceType::Berries => "Berries",
-            ResourceType::Fish => "Fish",
-            ResourceType::Game => "Game",
-            ResourceType::Minerals => "Minerals",
-            ResourceType::PreciousMetals => "Precious Metals",
-            ResourceType::Gems => "Gems",
-            ResourceType::Oil => "Oil",
-            ResourceType::Coal => "Coal",
-            ResourceType::Salt => "Salt",
-            ResourceType::Dyes => "Dyes",
-            // Advanced/real-world resources
+            ResourceType::Iron => "Iron",
             ResourceType::Copper => "Copper",
             ResourceType::Gold => "Gold",
             ResourceType::Silver => "Silver",
+            ResourceType::Aluminum => "Aluminum",
+            ResourceType::Titanium => "Titanium",
+            ResourceType::Coal => "Coal",
+            ResourceType::Oil => "Oil",
+            ResourceType::Hide => "Hide",
+            ResourceType::Fiber => "Fiber",
+            ResourceType::Clay => "Clay",
+            ResourceType::Sand => "Sand",
+            ResourceType::Salt => "Salt",
+            ResourceType::Herbs => "Herbs",
+            ResourceType::Berries => "Berries",
+            ResourceType::Meat => "Meat",
+            ResourceType::Fish => "Fish",
+            ResourceType::Grain => "Grain",
+            ResourceType::Fruit => "Fruit",
+            ResourceType::Vegetables => "Vegetables",
+            ResourceType::Nuts => "Nuts",
+            ResourceType::Honey => "Honey",
+            ResourceType::Milk => "Milk",
+            ResourceType::Eggs => "Eggs",
+            ResourceType::Wool => "Wool",
+            ResourceType::Silk => "Silk",
+            ResourceType::Dyes => "Dyes",
+            ResourceType::Spices => "Spices",
+            ResourceType::Gems => "Gems",
+            ResourceType::Obsidian => "Obsidian",
+            ResourceType::Flint => "Flint",
+            ResourceType::Bone => "Bone",
+            ResourceType::Shell => "Shell",
+            ResourceType::Coral => "Coral",
+            ResourceType::Pearls => "Pearls",
+            ResourceType::Amber => "Amber",
+            ResourceType::Jade => "Jade",
             ResourceType::Tin => "Tin",
             ResourceType::Lead => "Lead",
             ResourceType::Zinc => "Zinc",
             ResourceType::Nickel => "Nickel",
-            ResourceType::Aluminum => "Aluminum",
             ResourceType::Silicon => "Silicon",
             ResourceType::Uranium => "Uranium",
             ResourceType::RareEarths => "Rare Earths",
@@ -529,25 +693,47 @@ impl ResourceType {
             ResourceType::Lithium => "Lithium",
             ResourceType::Cobalt => "Cobalt",
             ResourceType::Platinum => "Platinum",
+            ResourceType::Metal => "Metal",
+            ResourceType::Game => "Game",
+            ResourceType::Minerals => "Minerals",
+            ResourceType::PreciousMetals => "Precious Metals",
         }
     }
     
     pub fn get_category(&self) -> ResourceCategory {
         match self {
-            ResourceType::Food | ResourceType::Water | ResourceType::Berries | ResourceType::Fish | ResourceType::Game => ResourceCategory::Consumable,
-            ResourceType::Wood | ResourceType::Stone | ResourceType::Metal | ResourceType::Clay | ResourceType::Fiber | ResourceType::Hide | ResourceType::Bone => ResourceCategory::Material,
-            ResourceType::Herbs | ResourceType::Dyes => ResourceCategory::Crafting,
-            ResourceType::Minerals | ResourceType::PreciousMetals | ResourceType::Gems | ResourceType::Oil | ResourceType::Coal | ResourceType::Salt => ResourceCategory::Industrial,
-            // Advanced/real-world resources
-            ResourceType::Copper | ResourceType::Gold | ResourceType::Silver | ResourceType::Tin | ResourceType::Lead | ResourceType::Zinc | ResourceType::Nickel | ResourceType::Aluminum | ResourceType::Silicon | ResourceType::Uranium | ResourceType::RareEarths | ResourceType::Phosphorus | ResourceType::Sulfur | ResourceType::Lithium | ResourceType::Cobalt | ResourceType::Platinum => ResourceCategory::Industrial,
+            ResourceType::Food | ResourceType::Water | ResourceType::Herbs | ResourceType::Berries | ResourceType::Fish | ResourceType::Game | ResourceType::Meat | ResourceType::Grain | ResourceType::Fruit | ResourceType::Vegetables | ResourceType::Nuts | ResourceType::Honey | ResourceType::Milk | ResourceType::Eggs => ResourceCategory::Food,
+            ResourceType::Wood | ResourceType::Stone | ResourceType::Metal | ResourceType::Clay | ResourceType::Fiber | ResourceType::Hide | ResourceType::Bone | ResourceType::Wool | ResourceType::Silk => ResourceCategory::Materials,
+            ResourceType::Minerals | ResourceType::PreciousMetals | ResourceType::Gems | ResourceType::Obsidian | ResourceType::Flint | ResourceType::Shell | ResourceType::Coral | ResourceType::Pearls | ResourceType::Amber | ResourceType::Jade => ResourceCategory::Luxury,
+            ResourceType::Copper | ResourceType::Gold | ResourceType::Silver | ResourceType::Tin | ResourceType::Lead | ResourceType::Zinc | ResourceType::Nickel | ResourceType::Aluminum | ResourceType::Silicon | ResourceType::Uranium | ResourceType::RareEarths | ResourceType::Phosphorus | ResourceType::Sulfur | ResourceType::Lithium | ResourceType::Cobalt | ResourceType::Platinum | ResourceType::Iron | ResourceType::Titanium | ResourceType::Coal | ResourceType::Oil | ResourceType::Sand | ResourceType::Salt | ResourceType::Dyes | ResourceType::Spices => ResourceCategory::Industrial,
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum ResourceCategory {
+    Food,
+    Materials,
+    Luxury,
+    Industrial,
     Consumable,
     Material,
     Crafting,
-    Industrial,
+}
+
+pub fn get_base_quantity(resource_type: &ResourceType) -> f32 {
+    let mut rng = rand::thread_rng();
+    let base_quantity = match resource_type {
+        ResourceType::Food | ResourceType::Water | ResourceType::Herbs | ResourceType::Berries | ResourceType::Fish | ResourceType::Game | ResourceType::Meat | ResourceType::Grain | ResourceType::Fruit | ResourceType::Vegetables | ResourceType::Nuts | ResourceType::Honey | ResourceType::Milk | ResourceType::Eggs => rng.gen_range(1.0..10.0),
+        ResourceType::Wood | ResourceType::Stone | ResourceType::Metal | ResourceType::Clay => rng.gen_range(2.0..10.0),
+        ResourceType::Fiber | ResourceType::Hide | ResourceType::Bone => rng.gen_range(0.5..3.0),
+        ResourceType::Minerals | ResourceType::PreciousMetals | ResourceType::Gems => rng.gen_range(0.1..1.0),
+        ResourceType::Copper | ResourceType::Gold | ResourceType::Silver | ResourceType::Tin | ResourceType::Lead | ResourceType::Zinc | ResourceType::Nickel | ResourceType::Aluminum | ResourceType::Silicon | ResourceType::Uranium | ResourceType::RareEarths | ResourceType::Phosphorus | ResourceType::Sulfur | ResourceType::Lithium | ResourceType::Cobalt | ResourceType::Platinum => rng.gen_range(0.01..0.1),
+        ResourceType::Iron | ResourceType::Titanium => rng.gen_range(0.5..2.0),
+        ResourceType::Coal | ResourceType::Oil => rng.gen_range(1.0..5.0),
+        ResourceType::Sand | ResourceType::Salt => rng.gen_range(0.5..3.0),
+        ResourceType::Wool | ResourceType::Silk | ResourceType::Dyes | ResourceType::Spices => rng.gen_range(0.2..2.0),
+        ResourceType::Obsidian | ResourceType::Flint | ResourceType::Shell | ResourceType::Coral | ResourceType::Pearls | ResourceType::Amber | ResourceType::Jade => rng.gen_range(0.1..1.0),
+    };
+    base_quantity
 }

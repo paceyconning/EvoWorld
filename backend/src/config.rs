@@ -20,12 +20,13 @@ pub struct SimulationConfig {
     pub log_interval: u64,        // Log events every N ticks
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct WorldConfig {
-    pub world_size: (u32, u32),   // World dimensions (width, height)
-    pub terrain_seed: u64,        // Seed for procedural terrain generation
-    pub climate_zones: u32,       // Number of climate zones
-    pub resource_density: f64,    // Density of resources (0.0 to 1.0)
+    pub world_size: (u32, u32),
+    pub terrain_seed: u64,
+    pub initial_population: u32,
+    pub resource_density: f32,
+    pub weather_variability: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,8 +67,9 @@ impl Config {
             world: WorldConfig {
                 world_size: (1000, 1000),
                 terrain_seed: 42,
-                climate_zones: 5,
+                initial_population: 100,
                 resource_density: 0.3,
+                weather_variability: 0.1,
             },
             ai: AIConfig {
                 behavior_complexity: 5,

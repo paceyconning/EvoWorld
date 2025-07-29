@@ -77,36 +77,34 @@ impl SimulationEngine {
         let mut world = self.world.write().await;
         let mut event_log = self.event_log.write().await;
 
+        // Process humanoid behaviors
         let mut new_children = Vec::new();
-        for humanoid in &mut world.humanoids {
+        let humanoids: Vec<_> = world.humanoids.iter_mut().collect();
+        for humanoid in humanoids {
             if tick % self.config.ai.decision_frequency as u64 == 0 {
-                let behavior_result = self.process_humanoid_behavior(humanoid, &world, tick).await?;
+                let world_clone = world.clone();
+                let behavior_result = self.process_humanoid_behavior(humanoid, &world_clone, tick).await?;
+                
                 if let Some(event) = behavior_result.event {
                     event_log.add_event(event);
-                    debug!("[TICK {}] Humanoid event added: {:?}", tick, event);
                 }
                 if let Some(child) = behavior_result.child {
-                    debug!("[TICK {}] New humanoid born: {}", tick, child.name);
                     new_children.push(child);
                 }
             }
             // Tech discovery: check available resources nearby
-            let nearby_resources: Vec<_> = self.resource_manager.get_resources_near(humanoid.position, 10.0)
-                .into_iter().map(|r| r.resource_type.clone()).collect();
-            for (milestone, _) in super::behavior::TECH_TREE.iter() {
-                humanoid.try_discover_tech((*milestone).clone(), &nearby_resources);
-            }
-            // Creative inspiration
             humanoid.try_creative_inspiration(tick);
         }
         world.humanoids.extend(new_children);
 
-        // Process tribe-level AI behaviors
-        for tribe in &mut world.tribes {
-            let tribe_behavior = self.process_tribe_behavior(tribe, &world, tick).await?;
+        // Process tribe behaviors
+        let tribes: Vec<_> = world.tribes.iter_mut().collect();
+        for tribe in tribes {
+            let world_clone = world.clone();
+            let tribe_behavior = self.process_tribe_behavior(tribe, &world_clone, tick).await?;
+            
             if let Some(event) = tribe_behavior {
                 event_log.add_event(event);
-                debug!("[TICK {}] Tribe event added: {:?}", tick, event);
             }
         }
         debug!("[TICK {}] AI behaviors processed in {:?}", tick, start.elapsed());
@@ -123,13 +121,17 @@ impl SimulationEngine {
         let behavior_tree = BehaviorTree::new_for_humanoid(humanoid, &self.config.ai);
         
         // Execute behavior tree
-        let action = behavior_tree.execute(world, tick).await?;
+        let result = behavior_tree.execute(world, tick).await?;
         
-        // Apply the action
-        let child = humanoid.apply_action(action, world, tick)?;
+        // Apply behavior results to humanoid
+        humanoid.apply_behavior_result(result, world, tick)?;
+        
+        // Check for reproduction
+        let child = humanoid.try_reproduction(world, tick)?;
         
         // Check for emergent events
         let event = humanoid.check_emergent_events(world, tick)?;
+        
         Ok(ProcessHumanoidResult { event, child })
     }
     

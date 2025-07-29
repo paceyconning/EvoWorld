@@ -69,7 +69,7 @@ impl Event {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum EventCategory {
     Population,
     Social,
@@ -144,26 +144,22 @@ impl EventLog {
             .collect()
     }
     
-    pub fn get_event_statistics(&self) -> EventStatistics {
-        let total_events = self.events.len();
-        let significant_events = self.get_significant_events().len();
-        
+    pub fn get_statistics(&self) -> EventStatistics {
         let mut category_counts = std::collections::HashMap::new();
+        let mut total_impact = 0.0;
+        
         for event in &self.events {
-            let category = event.get_category();
-            *category_counts.entry(category).or_insert(0) += 1;
+            *category_counts.entry(event.get_category()).or_insert(0) += 1;
+            total_impact += event.impact_score;
         }
         
-        let average_impact = if total_events > 0 {
-            self.events.iter().map(|e| e.impact_score).sum::<f32>() / total_events as f32
-        } else {
-            0.0
-        };
+        let average_impact = if self.events.is_empty() { 0.0 } else { total_impact / self.events.len() as f32 };
+        let significant_events = self.get_significant_events().len();
         
         EventStatistics {
-            total_events,
+            total_events: self.events.len(),
             significant_events,
-            category_counts,
+            category_counts: category_counts.clone(),
             average_impact,
             events_per_category: category_counts,
         }

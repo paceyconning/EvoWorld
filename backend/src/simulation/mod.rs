@@ -122,6 +122,8 @@ impl Simulation {
     
     pub async fn get_recent_events(&self, limit: usize) -> Result<Vec<serde_json::Value>> {
         let event_log = self.event_log.read().await;
-        Ok(event_log.get_recent_events(limit))
+        let events = event_log.get_recent_events(limit);
+        let json_events: Vec<serde_json::Value> = events.iter().map(|e| serde_json::to_value(e)).collect::<Result<Vec<_>, _>>()?;
+        Ok(json_events)
     }
 }
