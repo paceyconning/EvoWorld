@@ -121,8 +121,9 @@ cargo run
 ### ✅ Completed Features
 - **Terrain Generation**: Complete procedural terrain system with biomes, rivers, minerals, and structures
 - **AI Behavior Trees**: Sophisticated decision-making system for humanoids with personality-driven behavior
+- **Enhanced Resource Management**: Advanced resource spawning, environmental impact tracking, competition, and technology requirements
 - **Basic Simulation Engine**: Core tick-based simulation loop with world state management
-- **Resource System**: Resource types, inventory management, and basic spawning
+- **Resource System**: Resource types, inventory management, and sophisticated spawning
 - **Event System**: Comprehensive event logging and management
 - **Analytics Engine**: Population tracking and evolution metrics
 - **WebSocket Server**: Real-time communication infrastructure
