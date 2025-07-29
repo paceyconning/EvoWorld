@@ -1,94 +1,28 @@
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Deserialize};
 use noise::{NoiseFn, Perlin};
 use glam::Vec2;
 use tracing::debug;
 use crate::config::WorldConfig;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Terrain {
-    pub width: u32,
-    pub height: u32,
-    pub tiles: Vec<TerrainTile>,
-    pub seed: u64,
-    pub noise_generator: TerrainNoise,
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct Vec2Def {
+    pub x: f32,
+    pub y: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerrainTile {
-    pub x: u32,
-    pub y: u32,
-    pub elevation: f32,
-    pub moisture: f32,
-    pub temperature: f32,
-    pub biome_type: BiomeType,
-    pub fertility: f32,
-    pub vegetation_density: f32,
-    pub water_level: f32,
-    pub mineral_deposits: Vec<MineralDeposit>,
-    pub structures: Vec<TerrainStructure>,
+impl From<Vec2> for Vec2Def {
+    fn from(v: Vec2) -> Self {
+        Self { x: v.x, y: v.y }
+    }
+}
+impl From<Vec2Def> for Vec2 {
+    fn from(v: Vec2Def) -> Self {
+        Vec2::new(v.x, v.y)
+    }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum BiomeType {
-    Ocean,
-    Beach,
-    Desert,
-    Grassland,
-    Forest,
-    Jungle,
-    Tundra,
-    Mountain,
-    Swamp,
-    River,
-    Lake,
-    Volcanic,
-    Arctic,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MineralDeposit {
-    pub mineral_type: MineralType,
-    pub quantity: f32,
-    pub quality: f32,
-    pub depth: f32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum MineralType {
-    Iron,
-    Copper,
-    Gold,
-    Silver,
-    Coal,
-    Stone,
-    Clay,
-    Salt,
-    Gems,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerrainStructure {
-    pub structure_type: TerrainStructureType,
-    pub position: Vec2,
-    pub size: Vec2,
-    pub age: u64,
-    pub condition: f32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TerrainStructureType {
-    Cave,
-    RockFormation,
-    Waterfall,
-    HotSpring,
-    Geyser,
-    AncientRuins,
-    NaturalBridge,
-    Canyon,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct TerrainNoise {
     pub elevation_noise: Perlin,
     pub moisture_noise: Perlin,
@@ -96,19 +30,39 @@ pub struct TerrainNoise {
     pub mineral_noise: Perlin,
 }
 
+impl TerrainNoise {
+    pub fn new(seed: u64) -> Self {
+        let seed32 = seed as u32;
+        Self {
+            elevation_noise: Perlin::new(seed32),
+            moisture_noise: Perlin::new(seed32.wrapping_add(1)),
+            temperature_noise: Perlin::new(seed32.wrapping_add(2)),
+            mineral_noise: Perlin::new(seed32.wrapping_add(3)),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Terrain {
+    pub width: u32,
+    pub height: u32,
+    pub tiles: Vec<TerrainTile>,
+    pub seed: u64,
+    // pub noise_generator: TerrainNoise, // REMOVE from serialization
+}
+
 impl Terrain {
-    pub fn new(width: u32, height: u32) -> Self {
-        let seed = rand::random::<u64>();
+    pub fn new(width: u32, height: u32, seed: u64) -> Self {
         let noise_generator = TerrainNoise::new(seed);
-        
         Self {
             width,
             height,
             tiles: Vec::new(),
             seed,
-            noise_generator,
+            // noise_generator,
         }
     }
+    // When needed, reconstruct noise_generator from seed
     
     pub fn generate(&mut self) -> Result<()> {
         debug!("Generating terrain {}x{} with seed {}", self.width, self.height, self.seed);
@@ -367,8 +321,8 @@ impl Terrain {
             
             structures.push(TerrainStructure {
                 structure_type,
-                position: Vec2::new(x as f32, y as f32),
-                size: Vec2::new(5.0, 5.0),
+                position: Vec2::new(x as f32, y as f32).into(),
+                size: Vec2::new(5.0, 5.0).into(),
                 age: 0,
                 condition: 1.0,
             });
@@ -466,33 +420,22 @@ impl Terrain {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TerrainGenerator {
     pub seed: u64,
-    pub noise_generator: TerrainNoise,
+    // pub noise_generator: TerrainNoise, // REMOVE from serialization
 }
 
 impl TerrainGenerator {
     pub fn new(seed: u64) -> Self {
         Self {
             seed,
-            noise_generator: TerrainNoise::new(seed),
+            // noise_generator: TerrainNoise::new(seed), // REMOVE from serialization
         }
     }
     
     pub fn generate_terrain(&self, config: &WorldConfig) -> Result<Terrain> {
-        let mut terrain = Terrain::new(config.world_size.0, config.world_size.1);
-        terrain.seed = self.seed;
-        terrain.noise_generator = self.noise_generator.clone();
+        let mut terrain = Terrain::new(config.world_size.0, config.world_size.1, self.seed);
+        // terrain.seed = self.seed; // REMOVE from serialization
+        // terrain.noise_generator = self.noise_generator.clone(); // REMOVE from serialization
         terrain.generate()?;
         Ok(terrain)
-    }
-}
-
-impl TerrainNoise {
-    pub fn new(seed: u64) -> Self {
-        Self {
-            elevation_noise: Perlin::new(seed),
-            moisture_noise: Perlin::new(seed + 1),
-            temperature_noise: Perlin::new(seed + 2),
-            mineral_noise: Perlin::new(seed + 3),
-        }
     }
 }

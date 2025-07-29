@@ -7,6 +7,23 @@ use tracing::debug;
 
 use crate::config::WorldConfig;
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct Vec2Def {
+    pub x: f32,
+    pub y: f32,
+}
+
+impl From<Vec2> for Vec2Def {
+    fn from(v: Vec2) -> Self {
+        Self { x: v.x, y: v.y }
+    }
+}
+impl From<Vec2Def> for Vec2 {
+    fn from(v: Vec2Def) -> Self {
+        Vec2::new(v.x, v.y)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ResourceType {
     // Food resources
@@ -40,7 +57,7 @@ pub enum ResourceType {
 pub struct Resource {
     pub id: Uuid,
     pub resource_type: ResourceType,
-    pub position: Vec2,
+    pub position: Vec2Def,
     pub quantity: f32,
     pub quality: f32,
     pub is_renewable: bool,
@@ -81,7 +98,7 @@ impl Resource {
         Self {
             id: Uuid::new_v4(),
             resource_type,
-            position,
+            position: Vec2Def::from(position),
             quantity,
             quality,
             is_renewable,
@@ -152,10 +169,10 @@ impl ResourceManager {
         Self {
             resources: Vec::new(),
             resource_distribution: ResourceDistribution {
-                food_density: config.resource_density,
-                water_density: config.resource_density * 0.8,
-                material_density: config.resource_density * 0.6,
-                mineral_density: config.resource_density * 0.3,
+                food_density: config.resource_density as f32,
+                water_density: (config.resource_density as f32) * 0.8,
+                material_density: (config.resource_density as f32) * 0.6,
+                mineral_density: (config.resource_density as f32) * 0.3,
                 renewable_rate: 0.1,
             },
             discovery_rates,
@@ -169,14 +186,14 @@ impl ResourceManager {
         let mut rng = rand::thread_rng();
         
         let world_area = config.world_size.0 * config.world_size.1;
-        let total_resources = (world_area as f32 * config.resource_density) as usize;
+        let total_resources = (world_area as f32 * config.resource_density as f32) as usize;
         
         for _ in 0..total_resources {
             let resource_type = self.select_random_resource_type(&mut rng);
             let position = self.generate_random_position(config, &mut rng);
-            let quantity = self.generate_quantity(resource_type, &mut rng);
-            let quality = self.generate_quality(resource_type, &mut rng);
-            let is_renewable = self.is_renewable_resource(resource_type);
+            let quantity = self.generate_quantity(&resource_type, &mut rng);
+            let quality = self.generate_quality(&resource_type, &mut rng);
+            let is_renewable = self.is_renewable_resource(&resource_type);
             
             let resource = Resource::new(resource_type, position, quantity, quality, is_renewable);
             resources.push(resource);
@@ -205,7 +222,7 @@ impl ResourceManager {
         self.resources
             .iter()
             .filter(|resource| {
-                let distance = (resource.position - position).length();
+                let distance = (resource.position.into() - position).length();
                 distance <= max_distance
             })
             .collect()
