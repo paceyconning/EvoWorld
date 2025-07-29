@@ -1,0 +1,31 @@
+# EvoWorld Simulation Configuration
+
+# Database Configuration
+database_url = "postgresql://evoworld:password@localhost/evoworld"
+
+# Simulation Configuration
+[simulation]
+tick_rate = 10.0
+max_humanoids = 1000
+save_interval = 100
+log_interval = 10
+
+# World Configuration
+[world]
+world_size = [1000, 1000]
+terrain_seed = 42
+climate_zones = 5
+resource_density = 0.3
+
+# AI Configuration
+[ai]
+behavior_complexity = 5
+learning_rate = 0.1
+memory_capacity = 100
+decision_frequency = 1.0
+
+# WebSocket Configuration
+[websocket]
+host = "127.0.0.1"
+port = 8080
+max_connections = 10
