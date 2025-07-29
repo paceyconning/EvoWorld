@@ -4,10 +4,19 @@ use uuid::Uuid;
 use rand::Rng;
 use glam::Vec2;
 use tracing::debug;
+use tracing::info;
+use std::collections::HashSet;
+use super::behavior::TechMilestone;
 
 use crate::config::Config;
 use super::events::Event;
 use super::behavior::{BehaviorTree, Action};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Culture {
+    pub values: Vec<String>,
+    pub traditions: Vec<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Humanoid {
@@ -30,6 +39,8 @@ pub struct Humanoid {
     pub goals: Vec<Goal>,
     pub fears: Vec<Fear>,
     pub desires: Vec<Desire>,
+    pub culture: Option<Culture>,
+    pub achieved_tech: HashSet<TechMilestone>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -214,7 +225,21 @@ pub enum DesireType {
 impl Humanoid {
     pub fn new(name: String, position: Vec2, config: &Config) -> Self {
         let mut rng = rand::thread_rng();
-        
+        let primitive_cultures = vec![
+            Culture {
+                values: vec!["Survival".to_string(), "Sharing".to_string()],
+                traditions: vec!["FireMaking".to_string()],
+            },
+            Culture {
+                values: vec!["Strength".to_string(), "Courage".to_string()],
+                traditions: vec!["HuntRitual".to_string()],
+            },
+            Culture {
+                values: vec!["Curiosity".to_string(), "Learning".to_string()],
+                traditions: vec!["Storytelling".to_string()],
+            },
+        ];
+        let culture = Some(primitive_cultures[rng.gen_range(0..primitive_cultures.len())].clone());
         Self {
             id: Uuid::new_v4(),
             name,
@@ -235,6 +260,8 @@ impl Humanoid {
             goals: Vec::new(),
             fears: Vec::new(),
             desires: Vec::new(),
+            culture,
+            achieved_tech: HashSet::new(),
         }
     }
     
@@ -257,9 +284,11 @@ impl Humanoid {
         Ok(humanoids)
     }
     
-    pub fn apply_action(&mut self, action: Action, world: &super::world::World, tick: u64) -> Result<()> {
+    pub fn apply_action(&mut self, action: Action, world: &super::world::World, tick: u64) -> Result<Option<Humanoid>> {
         debug!("Humanoid {} applying action: {:?}", self.name, action);
-        
+        let mut outcome = "success".to_string();
+        let mut emotional_impact = 0.0;
+        let mut child = None;
         match action {
             Action::Move(direction, distance) => {
                 self.position += direction * distance;
@@ -267,55 +296,99 @@ impl Humanoid {
                 self.hunger += distance * 0.05;
             }
             Action::Gather(resource_type) => {
-                self.gather_resource(resource_type, world)?;
+                if let Err(e) = self.gather_resource(resource_type, world) {
+                    outcome = format!("fail: {}", e);
+                    emotional_impact = -0.2;
+                }
             }
             Action::Eat(food_amount) => {
+                let before = self.hunger;
                 self.eat(food_amount);
+                if self.hunger < before {
+                    emotional_impact = 0.1;
+                }
             }
             Action::Drink(water_amount) => {
+                let before = self.health;
                 self.drink(water_amount);
+                if self.health > before {
+                    emotional_impact = 0.1;
+                }
             }
             Action::Rest(duration) => {
                 self.rest(duration);
+                emotional_impact = 0.05;
             }
             Action::Socialize(target_id) => {
-                self.socialize(target_id, world)?;
+                if let Err(e) = self.socialize(target_id, world) {
+                    outcome = format!("fail: {}", e);
+                    emotional_impact = -0.1;
+                } else {
+                    emotional_impact = 0.1;
+                }
             }
             Action::Learn(knowledge_type) => {
                 self.learn(knowledge_type);
+                emotional_impact = 0.1;
             }
             Action::Create(tool_type) => {
                 self.create_tool(tool_type);
+                emotional_impact = 0.1;
             }
             Action::Build(building_type) => {
                 self.build(building_type);
+                emotional_impact = 0.1;
             }
             Action::Attack(target_id) => {
-                self.attack(target_id, world)?;
+                if let Err(e) = self.attack(target_id, world) {
+                    outcome = format!("fail: {}", e);
+                    emotional_impact = -0.2;
+                } else {
+                    emotional_impact = 0.05;
+                }
             }
             Action::Trade(partner_id, items) => {
-                self.trade(partner_id, items, world)?;
+                if let Err(e) = self.trade(partner_id, items, world) {
+                    outcome = format!("fail: {}", e);
+                    emotional_impact = -0.1;
+                } else {
+                    emotional_impact = 0.1;
+                }
             }
             Action::Explore => {
-                // TODO: Implement exploration behavior
                 debug!("Humanoid {} is exploring", self.name);
+                emotional_impact = 0.05;
             }
             Action::Defend => {
-                // TODO: Implement defense behavior
                 debug!("Humanoid {} is defending", self.name);
+                emotional_impact = 0.02;
             }
             Action::Flee => {
-                // TODO: Implement fleeing behavior
                 debug!("Humanoid {} is fleeing", self.name);
+                emotional_impact = -0.05;
             }
             Action::Idle => {
-                // TODO: Implement idle behavior
                 debug!("Humanoid {} is idle", self.name);
             }
+            Action::Procreate(partner_id) => {
+                if let Some(partner) = world.get_humanoid(partner_id) {
+                    if let Some(new_child) = self.try_procreate(partner, tick, &crate::config::Config::default()) {
+                        info!("[EVOLUTION] {} and {} procreated at tick {}", self.name, partner.name, tick);
+                        child = Some(new_child);
+                        emotional_impact = 0.2;
+                    } else {
+                        outcome = "fail: procreation conditions not met".to_string();
+                        emotional_impact = -0.1;
+                    }
+                } else {
+                    outcome = "fail: partner not found".to_string();
+                    emotional_impact = -0.2;
+                }
+            }
         }
-        
         self.current_behavior = Some(format!("{:?}", action));
-        Ok(())
+        self.record_action_memory(&action, &outcome, emotional_impact, tick);
+        Ok(child)
     }
     
     pub fn check_emergent_events(&self, world: &super::world::World, tick: u64) -> Result<Option<Event>> {
@@ -386,8 +459,28 @@ impl Humanoid {
             // Update relationship
             self.update_relationship(target_id, 0.1);
             self.social_skills = (self.social_skills + 0.01).min(10.0);
+            // Cultural transmission: share a value or tradition
+            if let (Some(my_culture), Some(target_culture)) = (&mut self.culture, &target.culture) {
+                let mut changed = false;
+                // Share a value
+                if let Some(val) = target_culture.values.iter().choose(&mut rand::thread_rng()) {
+                    if !my_culture.values.contains(val) && rand::random::<f32>() < 0.2 {
+                        my_culture.values.push(val.clone());
+                        changed = true;
+                    }
+                }
+                // Share a tradition
+                if let Some(trad) = target_culture.traditions.iter().choose(&mut rand::thread_rng()) {
+                    if !my_culture.traditions.contains(trad) && rand::random::<f32>() < 0.2 {
+                        my_culture.traditions.push(trad.clone());
+                        changed = true;
+                    }
+                }
+                if changed {
+                    info!("[CULTURE] {} adopted new cultural trait(s) from {} during socialization", self.name, target.name);
+                }
+            }
         }
-        
         Ok(())
     }
     
@@ -452,6 +545,145 @@ impl Humanoid {
                 trust: 0.5,
                 shared_memories: Vec::new(),
             });
+        }
+    }
+
+    fn record_action_memory(&mut self, action: &Action, outcome: &str, emotional_impact: f32, tick: u64) {
+        let memory = Memory {
+            id: uuid::Uuid::new_v4(),
+            event_type: format!("action:{:?}", action),
+            description: format!("Action: {:?}, Outcome: {}", action, outcome),
+            emotional_impact,
+            importance: emotional_impact.abs().min(1.0),
+            timestamp: tick,
+            associated_humanoids: Vec::new(),
+        };
+        self.memories.push(memory);
+        if self.memories.len() > 50 {
+            self.memories.remove(0);
+        }
+        info!("[LEARNING] {} remembers {:?} with impact {} at tick {}", self.name, action, emotional_impact, tick);
+    }
+
+    /// Attempt to procreate with another humanoid. Returns Some(new_humanoid) if successful.
+    pub fn try_procreate(&self, partner: &Humanoid, tick: u64, config: &Config) -> Option<Humanoid> {
+        // Primitive requirements: both must be healthy, not too old, and have a positive relationship
+        if self.health < 50.0 || partner.health < 50.0 { return None; }
+        if self.age < 16 || partner.age < 16 { return None; }
+        if self.age > 50 || partner.age > 50 { return None; }
+        let rel = self.relationships.iter().find(|r| r.target_id == partner.id);
+        if rel.map_or(0.0, |r| r.strength) < 0.2 { return None; }
+        // Mix genetics (traits, intelligence, skills) with mutation
+        let mut rng = rand::thread_rng();
+        let mix = |a: f32, b: f32| ((a + b) / 2.0 + rng.gen_range(-0.05..0.05)).clamp(0.0, 2.0);
+        let child_personality = Personality {
+            curiosity: mix(self.personality.curiosity, partner.personality.curiosity),
+            aggression: mix(self.personality.aggression, partner.personality.aggression),
+            cooperation: mix(self.personality.cooperation, partner.personality.cooperation),
+            creativity: mix(self.personality.creativity, partner.personality.creativity),
+            caution: mix(self.personality.caution, partner.personality.caution),
+            ambition: mix(self.personality.ambition, partner.personality.ambition),
+            empathy: mix(self.personality.empathy, partner.personality.empathy),
+            adaptability: mix(self.personality.adaptability, partner.personality.adaptability),
+        };
+        let child_intelligence = mix(self.intelligence, partner.intelligence).clamp(0.3, 1.0); // Start primitive
+        let child_social_skills = mix(self.social_skills, partner.social_skills).clamp(0.3, 1.0);
+        let child_technical_skills = mix(self.technical_skills, partner.technical_skills).clamp(0.3, 1.0);
+        let child_name = format!("Child_of_{}_{}", self.name, partner.name);
+        let child_position = (self.position + partner.position) / 2.0;
+        let mut child = Humanoid {
+            id: Uuid::new_v4(),
+            name: child_name,
+            position: child_position,
+            age: 0,
+            health: 100.0,
+            hunger: 0.0,
+            energy: 100.0,
+            intelligence: child_intelligence,
+            social_skills: child_social_skills,
+            technical_skills: child_technical_skills,
+            personality: child_personality,
+            memories: Vec::new(),
+            current_behavior: None,
+            tribe_id: self.tribe_id.or(partner.tribe_id),
+            inventory: Inventory::new(),
+            relationships: Vec::new(),
+            goals: Vec::new(),
+            fears: Vec::new(),
+            desires: Vec::new(),
+            culture: None,
+            achieved_tech: HashSet::new(),
+        };
+        // Small chance for beneficial mutation (evolution)
+        if rng.gen_bool(0.05) {
+            child.intelligence = (child.intelligence + rng.gen_range(0.01..0.1)).min(2.0);
+        }
+        if rng.gen_bool(0.05) {
+            child.personality.adaptability = (child.personality.adaptability + rng.gen_range(0.01..0.1)).min(2.0);
+        }
+        // Inherit a subset of knowledge from parents (stub for future expansion)
+        let mut inherited_knowledge = Vec::new();
+        for k in self.inventory.knowledge.iter().chain(partner.inventory.knowledge.iter()) {
+            if rand::random::<f32>() < 0.2 { // 20% chance to inherit each knowledge
+                inherited_knowledge.push(k.clone());
+            }
+        }
+        child.inventory.knowledge = inherited_knowledge;
+        info!("[INHERITANCE] {} inherits {} knowledge items from parents at tick {}", child.name, child.inventory.knowledge.len(), tick);
+        // Inherit culture (stub): randomly select one parent's culture or mix values/traditions
+        child.culture = match (&self.culture, &partner.culture) {
+            (Some(c1), Some(c2)) => {
+                let mut rng = rand::thread_rng();
+                if rng.gen_bool(0.5) {
+                    Some(c1.clone())
+                } else {
+                    Some(c2.clone())
+                }
+            },
+            (Some(c), None) | (None, Some(c)) => Some(c.clone()),
+            (None, None) => None,
+        };
+        if let Some(ref c) = child.culture {
+            info!("[INHERITANCE] {} inherits culture: values={:?}, traditions={:?} at tick {}", child.name, c.values, c.traditions, tick);
+        }
+        // Inherit a subset of tech milestones from parents
+        for tech in self.achieved_tech.union(&partner.achieved_tech) {
+            if rand::random::<f32>() < 0.5 {
+                child.achieved_tech.insert(tech.clone());
+            }
+        }
+        Some(child)
+    }
+
+    /// Attempt to discover a new tech milestone if requirements are met, with creativity bonus
+    pub fn try_discover_tech(&mut self, milestone: TechMilestone, available_resources: &[super::resources::ResourceType]) {
+        use super::behavior::TECH_TREE;
+        if self.achieved_tech.contains(&milestone) { return; }
+        if let Some((_, reqs)) = TECH_TREE.iter().find(|(m, _)| **m == milestone) {
+            if reqs.iter().all(|r| available_resources.contains(r)) {
+                // Creativity bonus: higher creativity increases chance of breakthrough
+                let creativity_factor = self.personality.creativity;
+                if rand::random::<f32>() < 0.5 + creativity_factor * 0.5 {
+                    self.achieved_tech.insert(milestone.clone());
+                    tracing::info!("[TECH] {} achieved tech milestone: {:?} (creativity: {:.2})", self.name, milestone, creativity_factor);
+                }
+            }
+        }
+    }
+
+    /// Creative inspiration: occasionally invent new knowledge or traditions if creativity is high
+    pub fn try_creative_inspiration(&mut self, tick: u64) {
+        if self.personality.creativity > 0.7 && rand::random::<f32>() < self.personality.creativity * 0.1 {
+            // Invent a new tradition
+            if let Some(culture) = &mut self.culture {
+                let new_trad = format!("Invention_{}_{:.0}", self.name, tick as f32 * self.personality.creativity);
+                if !culture.traditions.contains(&new_trad) {
+                    culture.traditions.push(new_trad.clone());
+                    tracing::info!("[CREATIVITY] {} invented a new tradition: {} at tick {}", self.name, new_trad, tick);
+                }
+            }
+            // Invent a new knowledge (stub: just log for now)
+            tracing::info!("[CREATIVITY] {} had a creative breakthrough at tick {}", self.name, tick);
         }
     }
 }

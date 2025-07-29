@@ -1,0 +1,4 @@
+[gd_scene load_steps=2 format=3]
+
+[node name="Resource" type="Node3D"]
+# TODO: Add MeshInstance3D and scripts for resource logic

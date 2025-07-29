@@ -4,6 +4,7 @@ use tracing::{info, warn, error, debug};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde_json::Value;
+use std::time::Instant;
 
 use crate::config::Config;
 use crate::database;
@@ -47,48 +48,68 @@ impl SimulationEngine {
     }
     
     pub async fn update_world(&mut self, tick: u64) -> Result<()> {
-        debug!("Updating world state at tick {}", tick);
-        
+        let start = Instant::now();
+        debug!("[TICK {}] Updating world state", tick);
         let mut world = self.world.write().await;
-        
+
         // Update environmental conditions
+        let env_start = Instant::now();
         world.update_environment(tick)?;
-        
+        debug!("[TICK {}] Environment updated in {:?}", tick, env_start.elapsed());
+
         // Update resource availability
+        let res_start = Instant::now();
         self.resource_manager.update_resources(&mut world, tick)?;
-        
+        debug!("[TICK {}] Resources updated in {:?}", tick, res_start.elapsed());
+
         // Update weather and climate
+        let weather_start = Instant::now();
         world.update_weather(tick)?;
-        
+        debug!("[TICK {}] Weather updated in {:?}", tick, weather_start.elapsed());
+
+        debug!("[TICK {}] World update completed in {:?}", tick, start.elapsed());
         Ok(())
     }
     
     pub async fn process_ai_behaviors(&mut self, tick: u64) -> Result<()> {
-        debug!("Processing AI behaviors at tick {}", tick);
-        
+        let start = Instant::now();
+        debug!("[TICK {}] Processing AI behaviors", tick);
         let mut world = self.world.write().await;
         let mut event_log = self.event_log.write().await;
-        
-        // Process each humanoid's AI behavior
+
+        let mut new_children = Vec::new();
         for humanoid in &mut world.humanoids {
             if tick % self.config.ai.decision_frequency as u64 == 0 {
                 let behavior_result = self.process_humanoid_behavior(humanoid, &world, tick).await?;
-                
-                if let Some(event) = behavior_result {
+                if let Some(event) = behavior_result.event {
                     event_log.add_event(event);
+                    debug!("[TICK {}] Humanoid event added: {:?}", tick, event);
+                }
+                if let Some(child) = behavior_result.child {
+                    debug!("[TICK {}] New humanoid born: {}", tick, child.name);
+                    new_children.push(child);
                 }
             }
+            // Tech discovery: check available resources nearby
+            let nearby_resources: Vec<_> = self.resource_manager.get_resources_near(humanoid.position, 10.0)
+                .into_iter().map(|r| r.resource_type.clone()).collect();
+            for (milestone, _) in super::behavior::TECH_TREE.iter() {
+                humanoid.try_discover_tech((*milestone).clone(), &nearby_resources);
+            }
+            // Creative inspiration
+            humanoid.try_creative_inspiration(tick);
         }
-        
+        world.humanoids.extend(new_children);
+
         // Process tribe-level AI behaviors
         for tribe in &mut world.tribes {
             let tribe_behavior = self.process_tribe_behavior(tribe, &world, tick).await?;
-            
             if let Some(event) = tribe_behavior {
                 event_log.add_event(event);
+                debug!("[TICK {}] Tribe event added: {:?}", tick, event);
             }
         }
-        
+        debug!("[TICK {}] AI behaviors processed in {:?}", tick, start.elapsed());
         Ok(())
     }
     
@@ -97,7 +118,7 @@ impl SimulationEngine {
         humanoid: &mut Humanoid,
         world: &World,
         tick: u64,
-    ) -> Result<Option<super::events::Event>> {
+    ) -> Result<ProcessHumanoidResult> {
         // Create behavior tree for this humanoid
         let behavior_tree = BehaviorTree::new_for_humanoid(humanoid, &self.config.ai);
         
@@ -105,14 +126,11 @@ impl SimulationEngine {
         let action = behavior_tree.execute(world, tick).await?;
         
         // Apply the action
-        humanoid.apply_action(action, world, tick)?;
+        let child = humanoid.apply_action(action, world, tick)?;
         
         // Check for emergent events
-        if let Some(event) = humanoid.check_emergent_events(world, tick)? {
-            return Ok(Some(event));
-        }
-        
-        Ok(None)
+        let event = humanoid.check_emergent_events(world, tick)?;
+        Ok(ProcessHumanoidResult { event, child })
     }
     
     async fn process_tribe_behavior(
@@ -136,55 +154,57 @@ impl SimulationEngine {
     }
     
     pub async fn process_emergent_events(&mut self, tick: u64) -> Result<()> {
-        debug!("Processing emergent events at tick {}", tick);
-        
+        let start = Instant::now();
+        debug!("[TICK {}] Processing emergent events", tick);
         let mut world = self.world.write().await;
         let mut event_log = self.event_log.write().await;
-        
+
         // Check for environmental events
         let env_events = world.check_environmental_events(tick)?;
         for event in env_events {
-            event_log.add_event(event);
+            event_log.add_event(event.clone());
+            debug!("[TICK {}] Environmental event: {:?}", tick, event);
         }
-        
+
         // Check for social events
         let social_events = world.check_social_events(tick)?;
         for event in social_events {
-            event_log.add_event(event);
+            event_log.add_event(event.clone());
+            debug!("[TICK {}] Social event: {:?}", tick, event);
         }
-        
+
         // Check for technological breakthroughs
         let tech_events = world.check_technological_events(tick)?;
         for event in tech_events {
-            event_log.add_event(event);
+            event_log.add_event(event.clone());
+            debug!("[TICK {}] Tech event: {:?}", tick, event);
         }
-        
+
         // Check for conflicts and wars
         let conflict_events = world.check_conflict_events(tick)?;
         for event in conflict_events {
-            event_log.add_event(event);
+            event_log.add_event(event.clone());
+            debug!("[TICK {}] Conflict event: {:?}", tick, event);
         }
-        
+        debug!("[TICK {}] Emergent events processed in {:?}", tick, start.elapsed());
         Ok(())
     }
     
     pub async fn update_social_structures(&mut self, tick: u64) -> Result<()> {
-        debug!("Updating social structures at tick {}", tick);
-        
+        let start = Instant::now();
+        debug!("[TICK {}] Updating social structures", tick);
         let mut world = self.world.write().await;
-        
+
         // Update tribe relationships
         world.update_tribe_relationships(tick)?;
-        
         // Handle tribe formation and dissolution
         world.process_tribe_changes(tick)?;
-        
         // Update cultural evolution
         world.update_cultural_evolution(tick)?;
-        
         // Handle population dynamics
         world.update_population_dynamics(tick)?;
-        
+
+        debug!("[TICK {}] Social structures updated in {:?}", tick, start.elapsed());
         Ok(())
     }
     
@@ -244,4 +264,9 @@ impl SimulationEngine {
         
         Ok(())
     }
+}
+
+struct ProcessHumanoidResult {
+    event: Option<super::events::Event>,
+    child: Option<super::humanoid::Humanoid>,
 }

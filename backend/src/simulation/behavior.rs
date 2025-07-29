@@ -40,6 +40,7 @@ pub enum Action {
     Explore,
     Defend,
     Flee,
+    Procreate(uuid::Uuid),             // partner_id
     Idle,
 }
 
@@ -81,6 +82,79 @@ pub enum BehaviorResult {
     Failure,
     Running,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum TechMilestone {
+    StoneTools,
+    Fire,
+    Pottery,
+    Agriculture,
+    Bronze,
+    Iron,
+    Writing,
+    Wheel,
+    Sailing,
+    Mathematics,
+    Masonry,
+    Currency,
+    Steel,
+    Gunpowder,
+    PrintingPress,
+    SteamPower,
+    Electricity,
+    Telegraph,
+    InternalCombustion,
+    Chemistry,
+    Medicine,
+    Railroads,
+    OilRefining,
+    Flight,
+    Radio,
+    Electronics,
+    Computers,
+    NuclearPower,
+    Spaceflight,
+    Internet,
+    GreenTech,
+    AI,
+    // ... add more as needed
+}
+
+/// Resource dependencies for each tech milestone
+pub static TECH_TREE: &[(&TechMilestone, &[ResourceType])] = &[
+    (&TechMilestone::StoneTools, &[ResourceType::Stone, ResourceType::Wood]),
+    (&TechMilestone::Fire, &[ResourceType::Wood]),
+    (&TechMilestone::Pottery, &[ResourceType::Clay]),
+    (&TechMilestone::Agriculture, &[ResourceType::Water, ResourceType::Food]),
+    (&TechMilestone::Bronze, &[ResourceType::Copper, ResourceType::Tin]),
+    (&TechMilestone::Iron, &[ResourceType::Iron, ResourceType::Coal]),
+    (&TechMilestone::Writing, &[ResourceType::Wood]),
+    (&TechMilestone::Wheel, &[ResourceType::Wood]),
+    (&TechMilestone::Sailing, &[ResourceType::Wood, ResourceType::Fiber]),
+    (&TechMilestone::Mathematics, &[]),
+    (&TechMilestone::Masonry, &[ResourceType::Stone]),
+    (&TechMilestone::Currency, &[ResourceType::Gold, ResourceType::Silver]),
+    (&TechMilestone::Steel, &[ResourceType::Iron, ResourceType::Coal]),
+    (&TechMilestone::Gunpowder, &[ResourceType::Sulfur]),
+    (&TechMilestone::PrintingPress, &[ResourceType::Wood]),
+    (&TechMilestone::SteamPower, &[ResourceType::Coal]),
+    (&TechMilestone::Electricity, &[ResourceType::Copper]),
+    (&TechMilestone::Telegraph, &[ResourceType::Copper]),
+    (&TechMilestone::InternalCombustion, &[ResourceType::Oil]),
+    (&TechMilestone::Chemistry, &[ResourceType::Sulfur, ResourceType::Phosphorus]),
+    (&TechMilestone::Medicine, &[ResourceType::Herbs]),
+    (&TechMilestone::Railroads, &[ResourceType::Iron, ResourceType::Coal]),
+    (&TechMilestone::OilRefining, &[ResourceType::Oil]),
+    (&TechMilestone::Flight, &[ResourceType::Aluminum]),
+    (&TechMilestone::Radio, &[ResourceType::Copper]),
+    (&TechMilestone::Electronics, &[ResourceType::Copper, ResourceType::Gold, ResourceType::Silicon, ResourceType::RareEarths]),
+    (&TechMilestone::Computers, &[ResourceType::Silicon, ResourceType::Gold, ResourceType::RareEarths]),
+    (&TechMilestone::NuclearPower, &[ResourceType::Uranium]),
+    (&TechMilestone::Spaceflight, &[ResourceType::Aluminum, ResourceType::Titanium]),
+    (&TechMilestone::Internet, &[ResourceType::Copper, ResourceType::Silicon]),
+    (&TechMilestone::GreenTech, &[ResourceType::RareEarths, ResourceType::Silicon, ResourceType::Lithium, ResourceType::Cobalt]),
+    (&TechMilestone::AI, &[ResourceType::Silicon, ResourceType::RareEarths]),
+];
 
 impl BehaviorTree {
     pub fn new_for_humanoid(humanoid: &Humanoid, ai_config: &AIConfig) -> Self {
@@ -206,7 +280,6 @@ impl BehaviorTree {
     }
     
     fn create_humanoid_behavior_tree(humanoid: &Humanoid, ai_config: &AIConfig) -> BehaviorNode {
-        // Create a complex behavior tree based on humanoid's personality and current state
         let mut root_children = Vec::new();
         
         // Survival behaviors (highest priority)
@@ -261,6 +334,17 @@ impl BehaviorTree {
                 Box::new(BehaviorNode::Action(Action::Create(super::humanoid::ToolType::Crafting))),
                 DecoratorType::Random(Box::new(BehaviorNode::Action(Action::Idle)), 0.15),
             ));
+        }
+        
+        // Procreation behavior (if mature and healthy)
+        if humanoid.age >= 16 && humanoid.age <= 50 && humanoid.health > 50.0 {
+            // Find a suitable partner from relationships
+            if let Some(partner) = humanoid.relationships.iter().find(|r| r.strength > 0.2) {
+                root_children.push(BehaviorNode::Sequence(vec![
+                    BehaviorNode::Condition(Condition::IsNearHumanoid(partner.target_id, 2.0)),
+                    BehaviorNode::Action(Action::Procreate(partner.target_id)),
+                ]));
+            }
         }
         
         // Default idle behavior

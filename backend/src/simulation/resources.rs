@@ -37,7 +37,7 @@ pub enum ResourceType {
     // Material resources
     Wood,
     Stone,
-    Metal,
+    Metal, // Generic, for legacy support
     Clay,
     Fiber,
     Hide,
@@ -51,6 +51,25 @@ pub enum ResourceType {
     Oil,
     Salt,
     Dyes,
+    
+    // Advanced/real-world resources for tech progression
+    Copper,         // Needed for early metallurgy, electronics
+    Gold,           // Electronics, currency, advanced tech
+    Silver,         // Electronics, currency
+    Tin,            // Bronze age
+    Lead,           // Industrial, batteries
+    Zinc,           // Alloys, batteries
+    Nickel,         // Alloys, stainless steel
+    Aluminum,       // Lightweight structures
+    Silicon,        // Electronics, semiconductors
+    Uranium,        // Nuclear power
+    RareEarths,     // Modern electronics, green tech
+    Phosphorus,     // Fertilizer, chemistry
+    Sulfur,         // Chemistry, industry
+    Lithium,        // Batteries
+    Cobalt,         // Batteries, alloys
+    Platinum,       // Catalysts, electronics
+    // ... add more as needed for future tech tree
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,6 +92,8 @@ pub struct ResourceManager {
     pub resources: Vec<Resource>,
     pub resource_distribution: ResourceDistribution,
     pub discovery_rates: std::collections::HashMap<ResourceType, f32>,
+    pub environmental_health: f32, // 0.0 (degraded) to 1.0 (pristine)
+    pub overharvest_counters: std::collections::HashMap<ResourceType, u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -176,6 +197,8 @@ impl ResourceManager {
                 renewable_rate: 0.1,
             },
             discovery_rates,
+            environmental_health: 1.0,
+            overharvest_counters: std::collections::HashMap::new(),
         }
     }
     
@@ -204,17 +227,39 @@ impl ResourceManager {
     }
     
     pub fn update_resources(&mut self, world: &mut super::world::World, tick: u64) -> Result<()> {
-        // Update resource regeneration
+        // Track overconsumption for renewable resources
+        let mut overharvested_types = Vec::new();
+        for resource in &mut self.resources {
+            if resource.is_renewable && resource.quantity < resource.max_quantity * 0.2 {
+                *self.overharvest_counters.entry(resource.resource_type).or_insert(0) += 1;
+                if self.overharvest_counters[&resource.resource_type] > 10 {
+                    overharvested_types.push(resource.resource_type);
+                }
+            }
+        }
+        // Apply environmental impact: reduce renewal rate and quality if overharvested
+        for resource in &mut self.resources {
+            if overharvested_types.contains(&resource.resource_type) {
+                resource.renewal_rate *= 0.95;
+                resource.quality *= 0.99;
+                self.environmental_health -= 0.0005;
+                if self.environmental_health < 0.0 { self.environmental_health = 0.0; }
+                tracing::warn!("[ENVIRONMENT] Overharvested {:?}: renewal rate and quality reduced, env health now {:.3}", resource.resource_type, self.environmental_health);
+            }
+        }
+        // Regenerate resources and remove depleted
         for resource in &mut self.resources {
             resource.regenerate(tick);
         }
-        
-        // Remove depleted resources
         self.resources.retain(|r| !r.is_depleted());
-        
         // Generate new resources based on terrain and conditions
         self.generate_new_resources(world, tick)?;
-        
+        // Environmental recovery if resources are abundant
+        if self.environmental_health < 1.0 && self.resources.iter().all(|r| r.quantity > r.max_quantity * 0.5) {
+            self.environmental_health += 0.0002;
+            if self.environmental_health > 1.0 { self.environmental_health = 1.0; }
+            tracing::info!("[ENVIRONMENT] Recovery: environmental health now {:.3}", self.environmental_health);
+        }
         Ok(())
     }
     
@@ -268,10 +313,27 @@ impl ResourceManager {
             ResourceType::Minerals,
             ResourceType::PreciousMetals,
             ResourceType::Gems,
-            ResourceType::Oil,
             ResourceType::Coal,
+            ResourceType::Oil,
             ResourceType::Salt,
             ResourceType::Dyes,
+            // Advanced/real-world resources
+            ResourceType::Copper,
+            ResourceType::Gold,
+            ResourceType::Silver,
+            ResourceType::Tin,
+            ResourceType::Lead,
+            ResourceType::Zinc,
+            ResourceType::Nickel,
+            ResourceType::Aluminum,
+            ResourceType::Silicon,
+            ResourceType::Uranium,
+            ResourceType::RareEarths,
+            ResourceType::Phosphorus,
+            ResourceType::Sulfur,
+            ResourceType::Lithium,
+            ResourceType::Cobalt,
+            ResourceType::Platinum,
         ];
         
         let weights = vec![
@@ -295,6 +357,23 @@ impl ResourceManager {
             2.0,  // Coal
             3.0,  // Salt
             2.0,  // Dyes
+            // Advanced/real-world resources
+            1.0, // Copper
+            0.8, // Gold
+            0.7, // Silver
+            0.6, // Tin
+            0.5, // Lead
+            0.4, // Zinc
+            0.3, // Nickel
+            0.2, // Aluminum
+            0.1, // Silicon
+            0.05, // Uranium
+            0.02, // RareEarths
+            0.01, // Phosphorus
+            0.01, // Sulfur
+            0.005, // Lithium
+            0.003, // Cobalt
+            0.001, // Platinum
         ];
         
         let total_weight: f32 = weights.iter().sum();
@@ -331,6 +410,8 @@ impl ResourceManager {
             ResourceType::Gems => rng.gen_range(0.05..0.5),
             ResourceType::Oil | ResourceType::Coal => rng.gen_range(1.0..5.0),
             ResourceType::Salt | ResourceType::Dyes => rng.gen_range(0.5..2.0),
+            // Advanced/real-world resources
+            ResourceType::Copper | ResourceType::Gold | ResourceType::Silver | ResourceType::Tin | ResourceType::Lead | ResourceType::Zinc | ResourceType::Nickel | ResourceType::Aluminum | ResourceType::Silicon | ResourceType::Uranium | ResourceType::RareEarths | ResourceType::Phosphorus | ResourceType::Sulfur | ResourceType::Lithium | ResourceType::Cobalt | ResourceType::Platinum => rng.gen_range(0.01..0.1),
         };
         
         base_quantity * (0.8 + rng.gen_range(0.0..0.4)) // Add some variation
@@ -431,6 +512,23 @@ impl ResourceType {
             ResourceType::Coal => "Coal",
             ResourceType::Salt => "Salt",
             ResourceType::Dyes => "Dyes",
+            // Advanced/real-world resources
+            ResourceType::Copper => "Copper",
+            ResourceType::Gold => "Gold",
+            ResourceType::Silver => "Silver",
+            ResourceType::Tin => "Tin",
+            ResourceType::Lead => "Lead",
+            ResourceType::Zinc => "Zinc",
+            ResourceType::Nickel => "Nickel",
+            ResourceType::Aluminum => "Aluminum",
+            ResourceType::Silicon => "Silicon",
+            ResourceType::Uranium => "Uranium",
+            ResourceType::RareEarths => "Rare Earths",
+            ResourceType::Phosphorus => "Phosphorus",
+            ResourceType::Sulfur => "Sulfur",
+            ResourceType::Lithium => "Lithium",
+            ResourceType::Cobalt => "Cobalt",
+            ResourceType::Platinum => "Platinum",
         }
     }
     
@@ -440,6 +538,8 @@ impl ResourceType {
             ResourceType::Wood | ResourceType::Stone | ResourceType::Metal | ResourceType::Clay | ResourceType::Fiber | ResourceType::Hide | ResourceType::Bone => ResourceCategory::Material,
             ResourceType::Herbs | ResourceType::Dyes => ResourceCategory::Crafting,
             ResourceType::Minerals | ResourceType::PreciousMetals | ResourceType::Gems | ResourceType::Oil | ResourceType::Coal | ResourceType::Salt => ResourceCategory::Industrial,
+            // Advanced/real-world resources
+            ResourceType::Copper | ResourceType::Gold | ResourceType::Silver | ResourceType::Tin | ResourceType::Lead | ResourceType::Zinc | ResourceType::Nickel | ResourceType::Aluminum | ResourceType::Silicon | ResourceType::Uranium | ResourceType::RareEarths | ResourceType::Phosphorus | ResourceType::Sulfur | ResourceType::Lithium | ResourceType::Cobalt | ResourceType::Platinum => ResourceCategory::Industrial,
         }
     }
 }
