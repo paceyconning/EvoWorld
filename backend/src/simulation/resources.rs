@@ -731,12 +731,15 @@ impl ResourceManager {
         resource_types
     }
     
-    pub fn update_resources(&mut self, world: &mut super::world::World, tick: u64) -> Result<()> {
+    pub fn update_resources(&mut self, world: &mut super::world::World, tick: u64) -> Result<usize> {
         debug!("Updating resources at tick {}", tick);
+        
+        let mut resources_updated = 0;
         
         // Update resource regeneration
         for resource in &mut self.resources {
             resource.regenerate(tick);
+            resources_updated += 1;
         }
         
         // Update environmental impact
@@ -752,12 +755,16 @@ impl ResourceManager {
         self.update_resource_migration(world, tick)?;
         
         // Generate new resources based on conditions
-        self.generate_new_resources(world, tick)?;
+        let new_resources = self.generate_new_resources(world, tick)?;
+        resources_updated += new_resources;
         
         // Clean up depleted resources
-        self.cleanup_depleted_resources();
+        let depleted_count = self.cleanup_depleted_resources();
         
-        Ok(())
+        debug!("Updated {} resources, generated {} new, removed {} depleted", 
+               resources_updated, new_resources, depleted_count);
+        
+        Ok(resources_updated)
     }
     
     pub fn update_environmental_impact(&mut self, world: &super::world::World, tick: u64) -> Result<()> {
@@ -830,8 +837,11 @@ impl ResourceManager {
         Ok(())
     }
     
-    pub fn cleanup_depleted_resources(&mut self) {
+    pub fn cleanup_depleted_resources(&mut self) -> usize {
+        let initial_count = self.resources.len();
         self.resources.retain(|r| !r.is_depleted());
+        let final_count = self.resources.len();
+        initial_count - final_count
     }
     
     pub fn can_access_resource(&self, humanoid_id: Uuid, resource: &Resource) -> bool {
@@ -1043,9 +1053,10 @@ impl ResourceManager {
         )
     }
     
-    fn generate_new_resources(&mut self, world: &super::world::World, tick: u64) -> Result<()> {
+    fn generate_new_resources(&mut self, world: &super::world::World, tick: u64) -> Result<usize> {
         // Generate new resources based on terrain conditions
         let mut rng = rand::thread_rng();
+        let mut new_resources_count = 0;
         
         // Check if we should generate new resources
         if tick % 1000 == 0 { // Every 1000 ticks
@@ -1060,10 +1071,11 @@ impl ResourceManager {
                 
                 let resource = Resource::new(resource_type, position, quantity, quality, is_renewable);
                 self.resources.push(resource);
+                new_resources_count += 1;
             }
         }
         
-        Ok(())
+        Ok(new_resources_count)
     }
     
     pub fn get_resource_statistics(&self) -> ResourceStatistics {

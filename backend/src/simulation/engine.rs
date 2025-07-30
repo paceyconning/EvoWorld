@@ -1,10 +1,11 @@
 use anyhow::Result;
 use sqlx::PgPool;
-use tracing::{info, warn, error, debug};
+use tracing::{info, warn, error, debug, trace};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde_json::Value;
 use std::time::Instant;
+use std::collections::HashMap;
 
 use crate::config::Config;
 use crate::database;
@@ -16,6 +17,37 @@ use super::behavior::BehaviorTree;
 use super::terrain::TerrainGenerator;
 use super::resources::ResourceManager;
 
+#[derive(Debug, Clone)]
+pub struct PerformanceMetrics {
+    pub world_update_time: std::time::Duration,
+    pub ai_processing_time: std::time::Duration,
+    pub resource_update_time: std::time::Duration,
+    pub event_processing_time: std::time::Duration,
+    pub social_update_time: std::time::Duration,
+    pub total_tick_time: std::time::Duration,
+    pub humanoids_processed: usize,
+    pub tribes_processed: usize,
+    pub events_generated: usize,
+    pub resources_updated: usize,
+}
+
+impl Default for PerformanceMetrics {
+    fn default() -> Self {
+        Self {
+            world_update_time: std::time::Duration::ZERO,
+            ai_processing_time: std::time::Duration::ZERO,
+            resource_update_time: std::time::Duration::ZERO,
+            event_processing_time: std::time::Duration::ZERO,
+            social_update_time: std::time::Duration::ZERO,
+            total_tick_time: std::time::Duration::ZERO,
+            humanoids_processed: 0,
+            tribes_processed: 0,
+            events_generated: 0,
+            resources_updated: 0,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct SimulationEngine {
     config: Config,
@@ -25,6 +57,9 @@ pub struct SimulationEngine {
     terrain_generator: TerrainGenerator,
     resource_manager: ResourceManager,
     behavior_trees: Vec<BehaviorTree>,
+    performance_history: Vec<PerformanceMetrics>,
+    pub last_metrics: PerformanceMetrics,
+    tick_count: u64,
 }
 
 impl SimulationEngine {
@@ -45,30 +80,51 @@ impl SimulationEngine {
             terrain_generator,
             resource_manager,
             behavior_trees: Vec::new(),
+            performance_history: Vec::new(),
+            last_metrics: PerformanceMetrics::default(),
+            tick_count: 0,
         })
     }
     
     pub async fn update_world(&mut self, tick: u64) -> Result<()> {
         let start = Instant::now();
-        debug!("[TICK {}] Updating world state", tick);
-        let mut world = self.world.write().await;
-
+        self.tick_count = tick;
+        
+        trace!("[TICK {}] Starting world update", tick);
+        
         // Update environmental conditions
         let env_start = Instant::now();
-        world.update_environment(tick)?;
-        debug!("[TICK {}] Environment updated in {:?}", tick, env_start.elapsed());
+        {
+            let mut world = self.world.write().await;
+            world.update_environment(tick)?;
+        }
+        let env_duration = env_start.elapsed();
+        debug!("[TICK {}] Environment updated in {:?}", tick, env_duration);
 
-        // Update resource availability
+        // Update resource availability with performance tracking
         let res_start = Instant::now();
-        self.resource_manager.update_resources(&mut world, tick)?;
-        debug!("[TICK {}] Resources updated in {:?}", tick, res_start.elapsed());
+        let resources_updated = {
+            let mut world = self.world.write().await;
+            self.resource_manager.update_resources(&mut world, tick)?
+        };
+        let res_duration = res_start.elapsed();
+        debug!("[TICK {}] Resources updated in {:?} ({} resources)", tick, res_duration, resources_updated);
 
         // Update weather and climate
         let weather_start = Instant::now();
-        world.update_weather(tick)?;
-        debug!("[TICK {}] Weather updated in {:?}", tick, weather_start.elapsed());
+        {
+            let mut world = self.world.write().await;
+            world.update_weather(tick)?;
+        }
+        let weather_duration = weather_start.elapsed();
+        debug!("[TICK {}] Weather updated in {:?}", tick, weather_duration);
 
-        debug!("[TICK {}] World update completed in {:?}", tick, start.elapsed());
+        let total_duration = start.elapsed();
+        self.last_metrics.world_update_time = total_duration;
+        self.last_metrics.resource_update_time = res_duration;
+        self.last_metrics.resources_updated = resources_updated;
+        
+        trace!("[TICK {}] World update completed in {:?}", tick, total_duration);
         Ok(())
     }
     
@@ -79,8 +135,10 @@ impl SimulationEngine {
         let mut world = self.world.write().await;
         let mut event_log = self.event_log.write().await;
         let mut new_children = Vec::new();
+        let mut events_generated = 0;
+        let mut humanoids_processed = 0;
 
-        // Process humanoid behaviors
+        // Process humanoid behaviors with performance tracking
         let humanoid_ids: Vec<_> = world.humanoids.iter().map(|h| h.id).collect();
         for humanoid_id in humanoid_ids {
             if let Some(humanoid) = world.humanoids.iter_mut().find(|h| h.id == humanoid_id) {
@@ -90,31 +148,46 @@ impl SimulationEngine {
                     
                     if let Some(event) = behavior_result.event {
                         event_log.add_event(event);
+                        events_generated += 1;
                     }
                     if let Some(child) = behavior_result.child {
                         new_children.push(child);
                     }
+                    humanoids_processed += 1;
                 }
                 // Tech discovery: check available resources nearby
                 humanoid.try_creative_inspiration(tick);
             }
         }
-        world.humanoids.extend(new_children);
+
+        // Add new children to world
+        for child in new_children {
+            world.humanoids.push(child);
+        }
 
         // Process tribe behaviors
         let tribe_ids: Vec<_> = world.tribes.iter().map(|t| t.id).collect();
+        let mut tribes_processed = 0;
         for tribe_id in tribe_ids {
             if let Some(tribe) = world.tribes.iter_mut().find(|t| t.id == tribe_id) {
-                // Process behavior without cloning world
-                let tribe_behavior = self.process_tribe_behavior_simple(tribe, tick).await?;
-                
-                if let Some(event) = tribe_behavior {
-                    event_log.add_event(event);
+                if tick % self.config.ai.decision_frequency as u64 == 0 {
+                    if let Some(event) = self.process_tribe_behavior_simple(tribe, tick).await? {
+                        event_log.add_event(event);
+                        events_generated += 1;
+                    }
+                    tribes_processed += 1;
                 }
             }
         }
+
+        let duration = start.elapsed();
+        self.last_metrics.ai_processing_time = duration;
+        self.last_metrics.humanoids_processed = humanoids_processed;
+        self.last_metrics.tribes_processed = tribes_processed;
+        self.last_metrics.events_generated = events_generated;
         
-        debug!("[TICK {}] AI behaviors processed in {:?}", tick, start.elapsed());
+        debug!("[TICK {}] AI processing completed in {:?} ({} humanoids, {} tribes, {} events)", 
+               tick, duration, humanoids_processed, tribes_processed, events_generated);
         Ok(())
     }
     
@@ -173,55 +246,121 @@ impl SimulationEngine {
     pub async fn process_emergent_events(&mut self, tick: u64) -> Result<()> {
         let start = Instant::now();
         debug!("[TICK {}] Processing emergent events", tick);
-        let mut world = self.world.write().await;
+        
+        let mut events_processed = 0;
         let mut event_log = self.event_log.write().await;
 
-        // Check for environmental events
-        let env_events = world.check_environmental_events(tick)?;
-        for event in env_events {
-            event_log.add_event(event.clone());
-            debug!("[TICK {}] Environmental event: {:?}", tick, event);
+        // Check for environmental events with performance tracking
+        let env_start = Instant::now();
+        {
+            let world = self.world.read().await;
+            let env_events = world.check_environmental_events(tick)?;
+            for event in env_events {
+                event_log.add_event(event.clone());
+                events_processed += 1;
+                trace!("[TICK {}] Environmental event: {:?}", tick, event);
+            }
         }
+        let env_duration = env_start.elapsed();
+        debug!("[TICK {}] Environmental events processed in {:?} ({} events)", tick, env_duration, events_processed);
 
-        // Check for social events
-        let social_events = world.check_social_events(tick)?;
-        for event in social_events {
-            event_log.add_event(event.clone());
-            debug!("[TICK {}] Social event: {:?}", tick, event);
+        // Check for social events with performance tracking
+        let social_start = Instant::now();
+        {
+            let world = self.world.read().await;
+            let social_events = world.check_social_events(tick)?;
+            for event in social_events {
+                event_log.add_event(event.clone());
+                events_processed += 1;
+                trace!("[TICK {}] Social event: {:?}", tick, event);
+            }
         }
+        let social_duration = social_start.elapsed();
+        debug!("[TICK {}] Social events processed in {:?} ({} events)", tick, social_duration, events_processed);
 
-        // Check for technological breakthroughs
-        let tech_events = world.check_technological_events(tick)?;
-        for event in tech_events {
-            event_log.add_event(event.clone());
-            debug!("[TICK {}] Tech event: {:?}", tick, event);
+        // Check for technological breakthroughs with performance tracking
+        let tech_start = Instant::now();
+        {
+            let world = self.world.read().await;
+            let tech_events = world.check_technological_events(tick)?;
+            for event in tech_events {
+                event_log.add_event(event.clone());
+                events_processed += 1;
+                trace!("[TICK {}] Technological event: {:?}", tick, event);
+            }
         }
+        let tech_duration = tech_start.elapsed();
+        debug!("[TICK {}] Technological events processed in {:?} ({} events)", tick, tech_duration, events_processed);
 
-        // Check for conflicts and wars
-        let conflict_events = world.check_conflict_events(tick)?;
-        for event in conflict_events {
-            event_log.add_event(event.clone());
-            debug!("[TICK {}] Conflict event: {:?}", tick, event);
+        // Check for conflicts and wars with performance tracking
+        let conflict_start = Instant::now();
+        {
+            let world = self.world.read().await;
+            let conflict_events = world.check_conflict_events(tick)?;
+            for event in conflict_events {
+                event_log.add_event(event.clone());
+                events_processed += 1;
+                trace!("[TICK {}] Conflict event: {:?}", tick, event);
+            }
         }
-        debug!("[TICK {}] Emergent events processed in {:?}", tick, start.elapsed());
+        let conflict_duration = conflict_start.elapsed();
+        debug!("[TICK {}] Conflict events processed in {:?} ({} events)", tick, conflict_duration, events_processed);
+
+        let total_duration = start.elapsed();
+        self.last_metrics.event_processing_time = total_duration;
+        
+        debug!("[TICK {}] Emergent events processed in {:?} ({} total events)", tick, total_duration, events_processed);
         Ok(())
     }
     
     pub async fn update_social_structures(&mut self, tick: u64) -> Result<()> {
         let start = Instant::now();
         debug!("[TICK {}] Updating social structures", tick);
-        let mut world = self.world.write().await;
+        
+        let mut social_updates = 0;
 
-        // Update tribe relationships
-        world.update_tribe_relationships(tick)?;
-        // Handle tribe formation and dissolution
-        world.process_tribe_changes(tick)?;
-        // Update cultural evolution
-        world.update_cultural_evolution(tick)?;
-        // Handle population dynamics
-        world.update_population_dynamics(tick)?;
+        // Update tribe relationships with performance tracking
+        let tribe_start = Instant::now();
+        {
+            let mut world = self.world.write().await;
+            world.update_tribe_relationships(tick)?;
+            social_updates += world.tribes.len();
+        }
+        let tribe_duration = tribe_start.elapsed();
+        debug!("[TICK {}] Tribe relationships updated in {:?} ({} tribes)", tick, tribe_duration, social_updates);
 
-        debug!("[TICK {}] Social structures updated in {:?}", tick, start.elapsed());
+        // Handle tribe formation and dissolution with performance tracking
+        let formation_start = Instant::now();
+        {
+            let mut world = self.world.write().await;
+            world.process_tribe_changes(tick)?;
+        }
+        let formation_duration = formation_start.elapsed();
+        debug!("[TICK {}] Tribe formation/dissolution processed in {:?}", tick, formation_duration);
+
+        // Update cultural evolution with performance tracking
+        let culture_start = Instant::now();
+        {
+            let mut world = self.world.write().await;
+            world.update_cultural_evolution(tick)?;
+            social_updates += world.humanoids.len();
+        }
+        let culture_duration = culture_start.elapsed();
+        debug!("[TICK {}] Cultural evolution updated in {:?} ({} humanoids)", tick, culture_duration, social_updates);
+
+        // Handle population dynamics with performance tracking
+        let pop_start = Instant::now();
+        {
+            let mut world = self.world.write().await;
+            world.update_population_dynamics(tick)?;
+        }
+        let pop_duration = pop_start.elapsed();
+        debug!("[TICK {}] Population dynamics updated in {:?}", tick, pop_duration);
+
+        let total_duration = start.elapsed();
+        self.last_metrics.social_update_time = total_duration;
+        
+        debug!("[TICK {}] Social structures updated in {:?}", tick, total_duration);
         Ok(())
     }
     
@@ -284,6 +423,77 @@ impl SimulationEngine {
         info!("Spawned {} initial humanoids", world.humanoids.len());
         
         Ok(())
+    }
+    
+    /// Get the latest performance metrics
+    pub fn get_performance_metrics(&self) -> PerformanceMetrics {
+        self.last_metrics.clone()
+    }
+    
+    /// Get performance history (last 100 ticks)
+    pub fn get_performance_history(&self) -> Vec<PerformanceMetrics> {
+        self.performance_history.clone()
+    }
+    
+    /// Log performance summary for the current tick
+    pub fn log_performance_summary(&self, tick: u64) {
+        let metrics = &self.last_metrics;
+        info!("[TICK {}] Performance Summary:", tick);
+        info!("  World Update: {:?}", metrics.world_update_time);
+        info!("  AI Processing: {:?} ({} humanoids, {} tribes)", 
+              metrics.ai_processing_time, metrics.humanoids_processed, metrics.tribes_processed);
+        info!("  Resource Update: {:?} ({} resources)", 
+              metrics.resource_update_time, metrics.resources_updated);
+        info!("  Event Processing: {:?} ({} events)", 
+              metrics.event_processing_time, metrics.events_generated);
+        info!("  Social Update: {:?}", metrics.social_update_time);
+        info!("  Total Tick Time: {:?}", metrics.total_tick_time);
+    }
+    
+    /// Store current metrics in history
+    pub fn store_performance_metrics(&mut self) {
+        // Keep only last 100 metrics to prevent memory bloat
+        if self.performance_history.len() >= 100 {
+            self.performance_history.remove(0);
+        }
+        self.performance_history.push(self.last_metrics.clone());
+    }
+    
+    /// Calculate average performance over the last N ticks
+    pub fn get_average_performance(&self, ticks: usize) -> Option<PerformanceMetrics> {
+        if self.performance_history.len() < ticks {
+            return None;
+        }
+        
+        let recent_metrics = &self.performance_history[self.performance_history.len() - ticks..];
+        
+        let mut avg_metrics = PerformanceMetrics::default();
+        for metrics in recent_metrics {
+            avg_metrics.world_update_time += metrics.world_update_time;
+            avg_metrics.ai_processing_time += metrics.ai_processing_time;
+            avg_metrics.resource_update_time += metrics.resource_update_time;
+            avg_metrics.event_processing_time += metrics.event_processing_time;
+            avg_metrics.social_update_time += metrics.social_update_time;
+            avg_metrics.total_tick_time += metrics.total_tick_time;
+            avg_metrics.humanoids_processed += metrics.humanoids_processed;
+            avg_metrics.tribes_processed += metrics.tribes_processed;
+            avg_metrics.events_generated += metrics.events_generated;
+            avg_metrics.resources_updated += metrics.resources_updated;
+        }
+        
+        let count = recent_metrics.len() as u32;
+        avg_metrics.world_update_time = avg_metrics.world_update_time / count;
+        avg_metrics.ai_processing_time = avg_metrics.ai_processing_time / count;
+        avg_metrics.resource_update_time = avg_metrics.resource_update_time / count;
+        avg_metrics.event_processing_time = avg_metrics.event_processing_time / count;
+        avg_metrics.social_update_time = avg_metrics.social_update_time / count;
+        avg_metrics.total_tick_time = avg_metrics.total_tick_time / count;
+        avg_metrics.humanoids_processed /= count as usize;
+        avg_metrics.tribes_processed /= count as usize;
+        avg_metrics.events_generated /= count as usize;
+        avg_metrics.resources_updated /= count as usize;
+        
+        Some(avg_metrics)
     }
 }
 

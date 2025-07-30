@@ -80,6 +80,7 @@ impl Simulation {
     }
     
     async fn tick(&mut self) -> Result<()> {
+        let tick_start = std::time::Instant::now();
         self.tick_count += 1;
         
         // Update world state
@@ -93,6 +94,18 @@ impl Simulation {
         
         // Update tribes and social dynamics
         self.engine.update_social_structures(self.tick_count).await?;
+        
+        // Calculate total tick time
+        let total_tick_time = tick_start.elapsed();
+        self.engine.last_metrics.total_tick_time = total_tick_time;
+        
+        // Store performance metrics
+        self.engine.store_performance_metrics();
+        
+        // Log performance summary periodically
+        if self.tick_count % self.config.simulation.log_interval == 0 {
+            self.engine.log_performance_summary(self.tick_count);
+        }
         
         // Save world state periodically
         if self.tick_count % self.config.simulation.save_interval == 0 {
