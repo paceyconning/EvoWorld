@@ -16,11 +16,12 @@ use super::behavior::BehaviorTree;
 use super::terrain::TerrainGenerator;
 use super::resources::ResourceManager;
 
+#[derive(Debug)]
 pub struct SimulationEngine {
     config: Config,
     world: Arc<RwLock<World>>,
     event_log: Arc<RwLock<EventLog>>,
-    db_pool: PgPool,
+    db_pool: Option<PgPool>,
     terrain_generator: TerrainGenerator,
     resource_manager: ResourceManager,
     behavior_trees: Vec<BehaviorTree>,
@@ -31,7 +32,7 @@ impl SimulationEngine {
         config: Config,
         world: Arc<RwLock<World>>,
         event_log: Arc<RwLock<EventLog>>,
-        db_pool: PgPool,
+        db_pool: Option<PgPool>,
     ) -> Result<Self> {
         let terrain_generator = TerrainGenerator::new(config.world.terrain_seed);
         let resource_manager = ResourceManager::new(&config.world);
@@ -225,12 +226,16 @@ impl SimulationEngine {
     }
     
     pub async fn save_world_state(&self, tick: u64) -> Result<()> {
-        debug!("Saving world state at tick {}", tick);
+        let world_data = {
+            let world = self.world.read().await;
+            serde_json::to_value(&*world)?
+        };
         
-        let world = self.world.read().await;
-        let world_data = serde_json::to_value(&*world)?;
-        
-        database::save_world_state(&self.db_pool, tick as i64, world_data).await?;
+        if let Some(ref pool) = self.db_pool {
+            database::save_world_state(pool, tick as i64, world_data).await?;
+        } else {
+            debug!("Database not available, skipping world state save");
+        }
         
         Ok(())
     }
@@ -285,4 +290,142 @@ impl SimulationEngine {
 struct ProcessHumanoidResult {
     event: Option<super::events::Event>,
     child: Option<super::humanoid::Humanoid>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    #[tokio::test]
+    async fn test_simulation_engine_creation() {
+        let config = Config::default();
+        let world = Arc::new(RwLock::new(World::new(&config.world).unwrap()));
+        let event_log = Arc::new(RwLock::new(EventLog::new()));
+        let db_pool = None; // No database for testing
+        
+        let engine = SimulationEngine::new(config, world, event_log, db_pool).unwrap();
+        
+        assert_eq!(engine.config.world.world_size, (1000, 1000));
+        assert_eq!(engine.config.world.terrain_seed, 42);
+    }
+
+    #[tokio::test]
+    async fn test_simulation_tick_processing() {
+        let config = Config::default();
+        let world = Arc::new(RwLock::new(World::new(&config.world).unwrap()));
+        let event_log = Arc::new(RwLock::new(EventLog::new()));
+        let db_pool = None;
+        
+        let mut engine = SimulationEngine::new(config, world, event_log, db_pool).unwrap();
+        
+        // Test processing a single tick
+        let result = engine.update_world(1).await;
+        assert!(result.is_ok(), "Tick processing should succeed");
+        
+        // Verify world state was updated
+        let world = engine.world.read().await;
+        assert!(world.time.tick >= 1, "World tick count should be updated");
+    }
+
+    #[tokio::test]
+    async fn test_world_state_saving() {
+        let config = Config::default();
+        let world = Arc::new(RwLock::new(World::new(&config.world).unwrap()));
+        let event_log = Arc::new(RwLock::new(EventLog::new()));
+        let db_pool = None; // No database for testing
+        
+        let engine = SimulationEngine::new(config, world, event_log, db_pool).unwrap();
+        
+        // Test saving world state (should succeed even without database)
+        let result = engine.save_world_state(1).await;
+        assert!(result.is_ok(), "World state saving should not crash");
+    }
+
+    #[tokio::test]
+    async fn test_ai_behavior_processing() {
+        let config = Config::default();
+        let world = Arc::new(RwLock::new(World::new(&config.world).unwrap()));
+        let event_log = Arc::new(RwLock::new(EventLog::new()));
+        let db_pool = None;
+        
+        let mut engine = SimulationEngine::new(config, world, event_log, db_pool).unwrap();
+        
+        // Test AI behavior processing
+        let result = engine.update_world(1).await;
+        assert!(result.is_ok(), "AI behavior processing should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_resource_management() {
+        let config = Config::default();
+        let world = Arc::new(RwLock::new(World::new(&config.world).unwrap()));
+        let event_log = Arc::new(RwLock::new(EventLog::new()));
+        let db_pool = None;
+        
+        let mut engine = SimulationEngine::new(config, world, event_log, db_pool).unwrap();
+        
+        // Test resource management through world update
+        let result = engine.update_world(1).await;
+        assert!(result.is_ok(), "Resource management should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_environment_updates() {
+        let config = Config::default();
+        let world = Arc::new(RwLock::new(World::new(&config.world).unwrap()));
+        let event_log = Arc::new(RwLock::new(EventLog::new()));
+        let db_pool = None;
+        
+        let mut engine = SimulationEngine::new(config, world, event_log, db_pool).unwrap();
+        
+        // Test environment updates
+        let result = engine.update_world(1).await;
+        assert!(result.is_ok(), "Environment updates should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_weather_system() {
+        let config = Config::default();
+        let world = Arc::new(RwLock::new(World::new(&config.world).unwrap()));
+        let event_log = Arc::new(RwLock::new(EventLog::new()));
+        let db_pool = None;
+        
+        let mut engine = SimulationEngine::new(config, world, event_log, db_pool).unwrap();
+        
+        // Test weather system
+        let result = engine.update_world(1).await;
+        assert!(result.is_ok(), "Weather system should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_simulation_loop() {
+        let config = Config::default();
+        let world = Arc::new(RwLock::new(World::new(&config.world).unwrap()));
+        let event_log = Arc::new(RwLock::new(EventLog::new()));
+        let db_pool = None;
+        
+        let mut engine = SimulationEngine::new(config, world, event_log, db_pool).unwrap();
+        
+        // Test running a few simulation ticks
+        for tick in 1..=5 {
+            let result = engine.update_world(tick).await;
+            assert!(result.is_ok(), "Simulation tick {} should succeed", tick);
+        }
+        
+        // Verify simulation progressed
+        let world = engine.world.read().await;
+        assert!(world.time.tick >= 5, "Simulation should have progressed");
+    }
+
+    #[test]
+    fn test_engine_configuration() {
+        let config = Config::default();
+        
+        // Test configuration values
+        assert_eq!(config.simulation.tick_rate, 10.0);
+        assert_eq!(config.simulation.max_humanoids, 1000);
+        assert_eq!(config.simulation.save_interval, 100);
+        assert_eq!(config.simulation.log_interval, 10);
+    }
 }

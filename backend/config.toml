@@ -1,7 +1,20 @@
 # EvoWorld Simulation Configuration
 
 # Database Configuration
-database_url = "postgresql://evoworld:password@localhost/evoworld"
+[database]
+host = "localhost"
+port = 5432
+database = "evoworld"
+username = "evoworld"
+password = "evoworld_password"
+# Use environment variable if available, otherwise use default
+url = "${DATABASE_URL:-postgresql://evoworld:evoworld_password@localhost:5432/evoworld}"
+
+# Analytics Configuration
+[analytics]
+enabled = true
+collection_interval = 100
+retention_days = 30
 
 # Simulation Configuration
 [simulation]
@@ -14,8 +27,10 @@ log_interval = 10
 [world]
 world_size = [1000, 1000]
 terrain_seed = 42
+initial_population = 100
 climate_zones = 5
 resource_density = 0.3
+weather_variability = 0.1
 
 # AI Configuration
 [ai]

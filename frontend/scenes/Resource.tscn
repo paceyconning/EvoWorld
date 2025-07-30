@@ -1,4 +1,23 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3 uid="uid://resource_scene"]
 
-[node name="Resource" type="Node3D"]
-# TODO: Add MeshInstance3D and scripts for resource logic
+[ext_resource type="Script" path="res://scripts/ResourceController.gd" id="1_resource"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_resource"]
+radius = 0.3
+height = 0.6
+
+[node name="Resource" type="StaticBody3D"]
+script = ExtResource("1_resource")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_resource")
+
+[node name="Label3D" type="Label3D" parent="."]
+offset_left = -50.0
+offset_top = -13.0
+offset_right = 50.0
+offset_bottom = 13.0
+text = "Resource"
+font_size = 10
+outline_size = 2
+outline_color = Color(0, 0, 0, 1)

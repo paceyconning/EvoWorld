@@ -3,13 +3,14 @@ use std::path::Path;
 use anyhow::Result;
 use config::{Config as ConfigFile, Environment, File};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Config {
-    pub database_url: String,
-    pub simulation: SimulationConfig,
     pub world: WorldConfig,
-    pub ai: AIConfig,
+    pub simulation: SimulationConfig,
     pub websocket: WebSocketConfig,
+    pub database: DatabaseConfig,
+    pub analytics: AnalyticsConfig,
+    pub ai: AIConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,6 +30,23 @@ pub struct WorldConfig {
     pub weather_variability: f32,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct AnalyticsConfig {
+    pub enabled: bool,
+    pub collection_interval: u64,
+    pub retention_days: u32,
+}
+
+impl AnalyticsConfig {
+    pub fn new() -> Self {
+        Self {
+            enabled: true,
+            collection_interval: 100,
+            retention_days: 30,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AIConfig {
     pub behavior_complexity: u32, // Complexity of AI behavior trees
@@ -44,6 +62,28 @@ pub struct WebSocketConfig {
     pub max_connections: usize,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct DatabaseConfig {
+    pub host: String,
+    pub port: u16,
+    pub database: String,
+    pub username: String,
+    pub password: String,
+    pub url: String,
+}
+
+impl DatabaseConfig {
+    pub fn get_connection_url(&self) -> String {
+        // Check for environment variable first
+        if let Ok(url) = std::env::var("DATABASE_URL") {
+            return url;
+        }
+        
+        // Use the configured URL
+        self.url.clone()
+    }
+}
+
 impl Config {
     pub fn load(path: &str) -> Result<Self> {
         let config = ConfigFile::builder()
@@ -57,13 +97,6 @@ impl Config {
 
     pub fn default() -> Self {
         Self {
-            database_url: "postgresql://evoworld:password@localhost/evoworld".to_string(),
-            simulation: SimulationConfig {
-                tick_rate: 10.0,
-                max_humanoids: 1000,
-                save_interval: 100,
-                log_interval: 10,
-            },
             world: WorldConfig {
                 world_size: (1000, 1000),
                 terrain_seed: 42,
@@ -71,16 +104,31 @@ impl Config {
                 resource_density: 0.3,
                 weather_variability: 0.1,
             },
-            ai: AIConfig {
-                behavior_complexity: 5,
-                learning_rate: 0.1,
-                memory_capacity: 100,
-                decision_frequency: 1.0,
+            simulation: SimulationConfig {
+                tick_rate: 10.0,
+                max_humanoids: 1000,
+                save_interval: 100,
+                log_interval: 10,
             },
             websocket: WebSocketConfig {
                 host: "127.0.0.1".to_string(),
                 port: 8080,
                 max_connections: 10,
+            },
+            database: DatabaseConfig {
+                host: "localhost".to_string(),
+                port: 5432,
+                database: "evoworld".to_string(),
+                username: "evoworld".to_string(),
+                password: "password".to_string(),
+                url: "postgresql://evoworld:password@localhost/evoworld".to_string(),
+            },
+            analytics: AnalyticsConfig::new(),
+            ai: AIConfig {
+                behavior_complexity: 5,
+                learning_rate: 0.1,
+                memory_capacity: 100,
+                decision_frequency: 1.0,
             },
         }
     }

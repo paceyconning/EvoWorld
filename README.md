@@ -96,57 +96,53 @@ cd evoworld
 # Setup backend
 cd backend
 cargo build  # ✅ Compiles successfully - all errors fixed!
-cargo test
+cargo test   # ✅ 33 tests passing
 
 # Configure database
-cp config.toml.example config.toml
-# Edit config.toml with your database settings
+cp env.example .env
+# Edit .env with your database settings
 
 # Run the simulation
-cargo run
+cargo run -- --websocket
 ```
 
 ### Frontend Setup
 ```bash
 # Open Godot 4
 # Import the frontend/ directory as a project
-# Run the main scene
+# Run the main scene (Main.tscn)
 ```
 
 ## Project Status
 
-**Current Phase**: Core Systems Development  
+**Current Phase**: Phase 2 Complete - Moving to Phase 3  
 **Last Updated**: December 2025
 
 ### ✅ Completed Features
 - **Terrain Generation**: Complete procedural terrain system with biomes, rivers, minerals, and structures
-- **AI Behavior Trees**: Sophisticated decision-making system for humanoids with personality-driven behavior
+- **AI Behavior Tree System**: Sophisticated decision-making system for humanoids with personality-driven behavior
 - **Enhanced Resource Management**: Advanced resource spawning, environmental impact tracking, competition, and technology requirements
-- **Basic Simulation Engine**: Core tick-based simulation loop with world state management
-- **Resource System**: Resource types, inventory management, and sophisticated spawning
-- **Event System**: Comprehensive event logging and management
-- **Analytics Engine**: Population tracking and evolution metrics
-- **WebSocket Server**: Real-time communication infrastructure
-- **Database Layer**: PostgreSQL integration with sqlx (temporarily disabled for development)
+- **WebSocket Communication**: Real-time client-server updates with simulation control and periodic broadcasting
+- **Database Functionality**: Portable database configuration with environment variables and automated setup
+- **Comprehensive Testing**: 33 unit tests covering all major modules with robust test infrastructure
+- **Frontend Development**: Complete Godot 4 frontend with 3D visualization, UI controls, and real-time WebSocket integration
+- **Core Simulation Infrastructure**: Robust foundation for complex world simulation
 
 ### 🚧 In Development
-- **Resource Management**: Enhanced spawning, consumption, and regeneration systems
-- **WebSocket Communication**: Real-time client-server updates and event streaming
-- **Database Functionality**: Re-enabling sqlx queries with proper configuration
-- **Comprehensive Testing**: Expanding unit tests and adding integration tests
+- **Simulation Engine Optimization**: Performance improvements and enhanced logging
+- **Social Systems Enhancement**: Cultural transmission and conflict resolution mechanisms
 
 ### 📋 Planned Features
-- **Frontend Development**: Godot 4 frontend implementation
-- **Enhanced Simulation Engine**: Optimized tick/update logic and resource processing
-- **Social & Cultural Systems**: Cultural transmission, conflict resolution, alliances
-- **Environmental Systems**: Ecosystem dynamics and environmental impact modeling
+- **Environmental Modeling**: Ecosystem dynamics and environmental impact modeling
 - **Advanced Analytics**: Richer evolution metrics and detailed tracking
-- **3D World Rendering**: Complete world visualization with camera controls
+- **Database Optimization**: Advanced persistence and backup systems
+- **WebSocket Enhancement**: Advanced streaming and connection management
 
 ## 📚 Documentation
 
 - **[CONTEXT.md](CONTEXT.md)** - Living context file with up-to-date project vision, architecture, roadmap, and critical issues
 - **[docs/](docs/)** - Additional documentation and guides
+- **[frontend/README.md](frontend/README.md)** - Frontend-specific documentation
 
 ## 🤝 Contributing
 

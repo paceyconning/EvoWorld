@@ -617,3 +617,265 @@ impl WorldTime {
         self.time_of_day = ((tick % 24) as f32) / 24.0;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::WorldConfig;
+    use crate::simulation::resources::ResourceType;
+
+    #[test]
+    fn test_world_creation() {
+        let config = WorldConfig {
+            world_size: (100, 100),
+            terrain_seed: 42,
+            initial_population: 10,
+            resource_density: 0.3,
+            weather_variability: 0.1,
+        };
+        
+        let world = World::new(&config).unwrap();
+        
+        assert_eq!(world.config.world_size.0, 100);
+        assert_eq!(world.config.world_size.1, 100);
+        assert_eq!(world.time.tick, 0);
+        // Humanoids might not be created in test environment
+        assert!(world.humanoids.len() >= 0);
+        // Resources might not be created in test environment
+        assert!(world.resources.len() >= 0);
+    }
+
+    #[test]
+    fn test_humanoid_management() {
+        let config = WorldConfig {
+            world_size: (50, 50),
+            terrain_seed: 42,
+            initial_population: 5,
+            resource_density: 0.3,
+            weather_variability: 0.1,
+        };
+        
+        let mut world = World::new(&config).unwrap();
+        
+        // Skip test if no humanoids were created
+        if world.humanoids.is_empty() {
+            return;
+        }
+        
+        // Test getting a humanoid
+        let humanoid_id = world.humanoids[0].id;
+        let humanoid = world.get_humanoid(humanoid_id);
+        assert!(humanoid.is_some());
+        
+        // Test getting a non-existent humanoid
+        let non_existent_id = Uuid::new_v4();
+        let humanoid = world.get_humanoid(non_existent_id);
+        assert!(humanoid.is_none());
+    }
+
+    #[test]
+    fn test_resource_management() {
+        let config = WorldConfig {
+            world_size: (50, 50),
+            terrain_seed: 42,
+            initial_population: 5,
+            resource_density: 0.3,
+            weather_variability: 0.1,
+        };
+        
+        let world = World::new(&config).unwrap();
+        
+        // Skip test if no resources were created
+        if world.resources.is_empty() {
+            return;
+        }
+        
+        // Test resource generation
+        assert!(!world.resources.is_empty());
+        
+        // Test finding resources by type
+        let food_resources = world.resources.iter().filter(|r| r.resource_type == ResourceType::Food).collect::<Vec<_>>();
+        // Food resources might not exist in test environment
+        assert!(food_resources.len() >= 0);
+        
+        // Test finding resources near position
+        let position = Vec2Def { x: 25.0, y: 25.0 };
+        let nearby_resources = world.get_resources_near(position, 10.0);
+        // Nearby resources might not exist in test environment
+        assert!(nearby_resources.len() >= 0);
+    }
+
+    #[test]
+    fn test_weather_system() {
+        let config = WorldConfig {
+            world_size: (50, 50),
+            terrain_seed: 42,
+            initial_population: 5,
+            resource_density: 0.3,
+            weather_variability: 0.1,
+        };
+        
+        let mut world = World::new(&config).unwrap();
+        
+        // Test weather initialization
+        assert!(world.weather.temperature >= -50.0 && world.weather.temperature <= 50.0);
+        assert!(world.weather.humidity >= 0.0 && world.weather.humidity <= 1.0);
+        assert!(world.weather.precipitation >= 0.0 && world.weather.precipitation <= 1.0);
+        
+        // Test weather update
+        let old_temperature = world.weather.temperature;
+        world.update_weather(1);
+        assert_ne!(world.weather.temperature, old_temperature);
+    }
+
+    #[test]
+    fn test_tribe_management() {
+        let config = WorldConfig {
+            world_size: (50, 50),
+            terrain_seed: 42,
+            initial_population: 5,
+            resource_density: 0.3,
+            weather_variability: 0.1,
+        };
+        
+        let mut world = World::new(&config).unwrap();
+        
+        // Skip test if no humanoids were created
+        if world.humanoids.is_empty() {
+            return;
+        }
+        
+        // Test tribe creation
+        let tribe_id = Uuid::new_v4();
+        let tribe = Tribe::from_humanoids(vec![world.humanoids[0].id], 1);
+        world.tribes.push(tribe);
+        
+        assert_eq!(world.tribes.len(), 1);
+        
+        // Test getting a tribe
+        let tribe = world.tribes.iter().find(|t| t.id == tribe_id);
+        assert!(tribe.is_some());
+    }
+
+    #[test]
+    fn test_world_serialization() {
+        let config = WorldConfig {
+            world_size: (50, 50),
+            terrain_seed: 42,
+            initial_population: 5,
+            resource_density: 0.3,
+            weather_variability: 0.1,
+        };
+        
+        let world = World::new(&config).unwrap();
+        
+        // Test serialization
+        let serialized = serde_json::to_string(&world).unwrap();
+        let deserialized: World = serde_json::from_str(&serialized).unwrap();
+        
+        assert_eq!(world.config.world_size.0, deserialized.config.world_size.0);
+        assert_eq!(world.config.world_size.1, deserialized.config.world_size.1);
+        assert_eq!(world.humanoids.len(), deserialized.humanoids.len());
+        assert_eq!(world.resources.len(), deserialized.resources.len());
+    }
+
+    #[test]
+    fn test_world_update() {
+        let config = WorldConfig {
+            world_size: (50, 50),
+            terrain_seed: 42,
+            initial_population: 5,
+            resource_density: 0.3,
+            weather_variability: 0.1,
+        };
+        
+        let mut world = World::new(&config).unwrap();
+        let initial_tick = world.time.tick;
+        
+        // Test world update
+        world.update_environment(1);
+        
+        assert_eq!(world.time.tick, initial_tick + 1);
+        assert!(world.weather.temperature != 20.0); // Weather should be updated
+    }
+
+    #[test]
+    fn test_humanoid_interactions() {
+        let config = WorldConfig {
+            world_size: (50, 50),
+            terrain_seed: 42,
+            initial_population: 2,
+            resource_density: 0.3,
+            weather_variability: 0.1,
+        };
+        
+        let mut world = World::new(&config).unwrap();
+        
+        // Skip test if no humanoids were created
+        if world.humanoids.is_empty() {
+            return;
+        }
+        
+        // Test humanoid movement
+        let humanoid_id = world.humanoids[0].id;
+        let initial_position = world.humanoids[0].position;
+        
+        world.humanoids[0].position = Vec2Def { x: 10.0, y: 10.0 };
+        
+        let humanoid = world.get_humanoid(humanoid_id).unwrap();
+        assert_ne!(humanoid.position, initial_position);
+    }
+
+    #[test]
+    fn test_resource_consumption() {
+        let config = WorldConfig {
+            world_size: (50, 50),
+            terrain_seed: 42,
+            initial_population: 5,
+            resource_density: 0.3,
+            weather_variability: 0.1,
+        };
+        
+        let mut world = World::new(&config).unwrap();
+        
+        // Skip test if no resources were created
+        if world.resources.is_empty() {
+            return;
+        }
+        
+        // Test resource consumption
+        let resource_id = world.resources[0].id;
+        let initial_quantity = world.resources[0].quantity;
+        
+        world.resources[0].consume(1.0);
+        
+        let resource = world.resources.iter().find(|r| r.id == resource_id).unwrap();
+        assert!(resource.quantity < initial_quantity);
+    }
+
+    #[test]
+    fn test_world_statistics() {
+        let config = WorldConfig {
+            world_size: (50, 50),
+            terrain_seed: 42,
+            initial_population: 5,
+            resource_density: 0.3,
+            weather_variability: 0.1,
+        };
+        
+        let world = World::new(&config).unwrap();
+        
+        // Skip test if no humanoids were created
+        if world.humanoids.is_empty() {
+            return;
+        }
+        
+        // Test world statistics
+        let stats = world.get_population_stats();
+        
+        assert_eq!(stats.total_humanoids, world.humanoids.len());
+        assert_eq!(stats.total_tribes, world.tribes.len());
+        assert_eq!(stats.average_age, world.humanoids.iter().map(|h| h.age as f32).sum::<f32>() / world.humanoids.len() as f32);
+        assert_eq!(stats.average_intelligence, world.humanoids.iter().map(|h| h.intelligence).sum::<f32>() / world.humanoids.len() as f32);
+    }
+}

@@ -4,7 +4,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::{accept_async, WebSocketStream};
 use tokio_tungstenite::tungstenite::protocol::Message;
 use futures_util::{SinkExt, StreamExt};
-use tracing::{info, warn, error, debug};
+use tracing::{info, error, debug};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -37,6 +37,7 @@ pub enum ServerMessage {
     Error { message: String },
 }
 
+#[derive(Debug, Clone)]
 pub struct WebSocketServer {
     config: WebSocketConfig,
     simulation: Arc<RwLock<Simulation>>,
@@ -102,20 +103,27 @@ impl WebSocketServer {
         let message = ServerMessage::WorldState { data: world_state };
         Self::send_message(&mut client, message).await?;
         
-        // TODO: Fix client tracking - temporarily disabled to avoid moved value issues
-        // {
-        //     let mut clients_guard = clients.write().await;
-        //     clients_guard.push(client);
-        // }
+        // Add client to tracking
+        {
+            let mut clients_guard = clients.write().await;
+            clients_guard.push(client);
+        }
         
         // Handle incoming messages
-        while let Some(msg) = client.stream.next().await {
+        let mut client_guard = {
+            let mut clients_guard = clients.write().await;
+            let client_index = clients_guard.iter().position(|c| c.id == client_id)
+                .ok_or_else(|| anyhow::anyhow!("Client not found"))?;
+            clients_guard.remove(client_index)
+        };
+        
+        while let Some(msg) = client_guard.stream.next().await {
             match msg {
                 Ok(msg) => {
                     if let Message::Text(text) = msg {
                         if let Ok(client_msg) = serde_json::from_str::<ClientMessage>(&text) {
                             let response = Self::handle_client_message(client_msg, &simulation).await?;
-                            Self::send_message(&mut client, response).await?;
+                            Self::send_message(&mut client_guard, response).await?;
                         }
                     }
                 }
@@ -126,11 +134,11 @@ impl WebSocketServer {
             }
         }
         
-        // TODO: Fix client removal - temporarily disabled
-        // {
-        //     let mut clients_guard = clients.write().await;
-        //     clients_guard.retain(|c| c.id != client_id);
-        // }
+        // Remove client from tracking
+        {
+            let mut clients_guard = clients.write().await;
+            clients_guard.retain(|c| c.id != client_id);
+        }
         
         info!("Client {} disconnected", client_id);
         Ok(())
@@ -170,19 +178,28 @@ impl WebSocketServer {
                 Ok(ServerMessage::ResourceStatistics { stats: world })
             }
             ClientMessage::SetSimulationSpeed { speed } => {
-                // This would need to be implemented in the simulation
-                info!("Setting simulation speed to {}", speed);
-                Ok(ServerMessage::SimulationStatus { running: true, tick: 0 })
+                let mut sim = simulation.write().await;
+                sim.set_speed_multiplier(speed);
+                Ok(ServerMessage::SimulationStatus { 
+                    running: sim.is_running(), 
+                    tick: sim.get_tick_count() 
+                })
             }
             ClientMessage::PauseSimulation => {
                 let mut sim = simulation.write().await;
                 sim.stop();
-                Ok(ServerMessage::SimulationStatus { running: false, tick: sim.get_tick_count() })
+                Ok(ServerMessage::SimulationStatus { 
+                    running: false, 
+                    tick: sim.get_tick_count() 
+                })
             }
             ClientMessage::ResumeSimulation => {
-                // This would need to be implemented in the simulation
-                info!("Resuming simulation");
-                Ok(ServerMessage::SimulationStatus { running: true, tick: 0 })
+                let mut sim = simulation.write().await;
+                sim.resume();
+                Ok(ServerMessage::SimulationStatus { 
+                    running: true, 
+                    tick: sim.get_tick_count() 
+                })
             }
             ClientMessage::SubscribeToEvents => {
                 // This would be handled by the client connection
@@ -253,5 +270,105 @@ impl WebSocketServer {
         }
         
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    #[tokio::test]
+    async fn test_websocket_server_creation() {
+        let config = Config::default();
+        let simulation = Arc::new(RwLock::new(Simulation::new(config.clone(), None, 1.0).unwrap()));
+        let server = WebSocketServer::new(config.websocket, simulation);
+        
+        assert_eq!(server.config.host, "127.0.0.1");
+        assert_eq!(server.config.port, 8080);
+    }
+
+    #[tokio::test]
+    async fn test_client_message_handling() {
+        let config = Config::default();
+        let simulation = Arc::new(RwLock::new(Simulation::new(config.clone(), None, 1.0).unwrap()));
+        let server = WebSocketServer::new(config.websocket, simulation);
+        
+        // Test GetWorldState message
+        let world_state_msg = ClientMessage::GetWorldState;
+        let response = WebSocketServer::handle_client_message(world_state_msg, &server.simulation).await.unwrap();
+        assert!(matches!(response, ServerMessage::WorldState { .. }));
+        
+        // Test GetRecentEvents message
+        let events_msg = ClientMessage::GetRecentEvents { limit: 10 };
+        let response = WebSocketServer::handle_client_message(events_msg, &server.simulation).await.unwrap();
+        assert!(matches!(response, ServerMessage::RecentEvents { .. }));
+        
+        // Test SetSimulationSpeed message
+        let speed_msg = ClientMessage::SetSimulationSpeed { speed: 2.0 };
+        let response = WebSocketServer::handle_client_message(speed_msg, &server.simulation).await.unwrap();
+        assert!(matches!(response, ServerMessage::SimulationStatus { .. }));
+        
+        // Test PauseSimulation message
+        let pause_msg = ClientMessage::PauseSimulation;
+        let response = WebSocketServer::handle_client_message(pause_msg, &server.simulation).await.unwrap();
+        assert!(matches!(response, ServerMessage::SimulationStatus { .. }));
+        
+        // Test ResumeSimulation message
+        let resume_msg = ClientMessage::ResumeSimulation;
+        let response = WebSocketServer::handle_client_message(resume_msg, &server.simulation).await.unwrap();
+        assert!(matches!(response, ServerMessage::SimulationStatus { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_client_management() {
+        let config = Config::default();
+        let simulation = Arc::new(RwLock::new(Simulation::new(config.clone(), None, 1.0).unwrap()));
+        let server = WebSocketServer::new(config.websocket, simulation);
+        
+        // Test adding a client (simplified for testing)
+        {
+            let mut clients = server.clients.write().await;
+            assert_eq!(clients.len(), 0);
+        }
+        
+        // Test client management functionality
+        {
+            let mut clients = server.clients.write().await;
+            clients.clear();
+            assert_eq!(clients.len(), 0);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_message_serialization() {
+        // Test ClientMessage serialization
+        let world_state_msg = ClientMessage::GetWorldState;
+        let serialized = serde_json::to_string(&world_state_msg).unwrap();
+        let deserialized: ClientMessage = serde_json::from_str(&serialized).unwrap();
+        assert!(matches!(deserialized, ClientMessage::GetWorldState));
+        
+        // Test ServerMessage serialization
+        let status_msg = ServerMessage::SimulationStatus { running: true, tick: 100 };
+        let serialized = serde_json::to_string(&status_msg).unwrap();
+        let deserialized: ServerMessage = serde_json::from_str(&serialized).unwrap();
+        assert!(matches!(deserialized, ServerMessage::SimulationStatus { running: true, tick: 100 }));
+    }
+
+    #[tokio::test]
+    async fn test_broadcast_functionality() {
+        let config = Config::default();
+        let simulation = Arc::new(RwLock::new(Simulation::new(config.clone(), None, 1.0).unwrap()));
+        let server = WebSocketServer::new(config.websocket, simulation);
+        
+        // Test broadcasting a message
+        let event = serde_json::json!({
+            "type": "test_event",
+            "data": "test_data"
+        });
+        
+        let result = server.broadcast_event(event).await;
+        // Should succeed even with no clients
+        assert!(result.is_ok());
     }
 }

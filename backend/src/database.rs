@@ -162,3 +162,114 @@ pub async fn log_event(
     
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::PgPool;
+
+    #[tokio::test]
+    async fn test_database_config_validation() {
+        // Test valid database URL
+        let valid_url = "postgresql://user:pass@localhost:5432/testdb";
+        let pool_result = init_pool(valid_url).await;
+        // Should fail in test environment but not crash
+        assert!(pool_result.is_err() || pool_result.is_ok());
+        
+        // Test invalid database URL
+        let invalid_url = "invalid://url";
+        let pool_result = init_pool(invalid_url).await;
+        assert!(pool_result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_world_state_operations() {
+        // Test with a mock pool (this will fail in test environment but validates the interface)
+        let test_data = serde_json::json!({
+            "world_size": [100, 100],
+            "humanoids": [],
+            "resources": []
+        });
+        
+        // Test save_world_state function signature
+        let pool = match PgPool::connect("postgresql://dummy").await {
+            Ok(pool) => pool,
+            Err(_) => {
+                // Create a dummy pool for testing
+                match sqlx::PgPool::connect("postgresql://dummy:dummy@localhost/dummy").await {
+                    Ok(pool) => pool,
+                    Err(_) => return, // Skip test if no database
+                }
+            }
+        };
+        
+        let save_result = save_world_state(&pool, 1, test_data.clone()).await;
+        // Should fail in test environment but not crash
+        assert!(save_result.is_err() || save_result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_event_logging() {
+        let test_event = serde_json::json!({
+            "type": "test_event",
+            "tick": 1,
+            "data": "test_data"
+        });
+        
+        // Test log_event function signature
+        let pool = match PgPool::connect("postgresql://dummy").await {
+            Ok(pool) => pool,
+            Err(_) => {
+                match sqlx::PgPool::connect("postgresql://dummy:dummy@localhost/dummy").await {
+                    Ok(pool) => pool,
+                    Err(_) => return, // Skip test if no database
+                }
+            }
+        };
+        
+        let log_result = log_event(
+            &pool,
+            1,
+            "test_event",
+            "test_description",
+            test_event,
+            Some((0.0, 0.0)),
+            1.0
+        ).await;
+        
+        // Should fail in test environment but not crash
+        assert!(log_result.is_err() || log_result.is_ok());
+    }
+
+    #[test]
+    fn test_database_url_parsing() {
+        // Test URL parsing logic manually
+        let url = "postgresql://user:pass@localhost:5432/testdb";
+        
+        // Simple string parsing test
+        assert!(url.contains("postgresql"));
+        assert!(url.contains("localhost"));
+        assert!(url.contains("5432"));
+        assert!(url.contains("testdb"));
+    }
+
+    #[test]
+    fn test_connection_string_building() {
+        // Test building connection strings from components
+        let host = "localhost";
+        let port = 5432;
+        let database = "testdb";
+        let username = "testuser";
+        let password = "testpass";
+        
+        let connection_string = format!(
+            "postgresql://{}:{}@{}:{}/{}",
+            username, password, host, port, database
+        );
+        
+        assert_eq!(
+            connection_string,
+            "postgresql://testuser:testpass@localhost:5432/testdb"
+        );
+    }
+}

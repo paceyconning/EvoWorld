@@ -1,0 +1,96 @@
+[gd_scene load_steps=4 format=3 uid="uid://bqxvhqxqxqxqx"]
+
+[ext_resource type="Script" path="res://scripts/MainController.gd" id="1_0x0x0"]
+[ext_resource type="Script" path="res://scripts/WebSocketClient.gd" id="2_0x0x0"]
+[ext_resource type="Script" path="res://scripts/WorldRenderer.gd" id="3_0x0x0"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_0x0x0")
+
+[node name="WebSocketClient" type="Node" parent="."]
+script = ExtResource("2_0x0x0")
+
+[node name="WorldRenderer" type="Node3D" parent="."]
+script = ExtResource("3_0x0x0")
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="ConnectionStatus" type="Label" parent="UI"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -200.0
+offset_bottom = 50.0
+text = "Disconnected"
+horizontal_alignment = 2
+
+[node name="SimulationControls" type="VBoxContainer" parent="UI"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -200.0
+offset_right = 200.0
+
+[node name="SpeedControl" type="HBoxContainer" parent="UI/SimulationControls"]
+layout_mode = 2
+
+[node name="SpeedLabel" type="Label" parent="UI/SimulationControls/SpeedControl"]
+layout_mode = 2
+text = "Speed:"
+
+[node name="SpeedSlider" type="HSlider" parent="UI/SimulationControls/SpeedControl"]
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.1
+max_value = 5.0
+value = 1.0
+step = 0.1
+
+[node name="PlayPauseButton" type="Button" parent="UI/SimulationControls"]
+layout_mode = 2
+text = "Pause"
+
+[node name="StatsPanel" type="Panel" parent="UI"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -300.0
+offset_top = -300.0
+offset_right = -10.0
+offset_bottom = -10.0
+
+[node name="StatsContainer" type="VBoxContainer" parent="UI/StatsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+
+[node name="PopulationLabel" type="Label" parent="UI/StatsPanel/StatsContainer"]
+layout_mode = 2
+text = "Population: 0"
+
+[node name="TribesLabel" type="Label" parent="UI/StatsPanel/StatsContainer"]
+layout_mode = 2
+text = "Tribes: 0"
+
+[node name="ResourcesLabel" type="Label" parent="UI/StatsPanel/StatsContainer"]
+layout_mode = 2
+text = "Resources: 0"
+
+[node name="TickLabel" type="Label" parent="UI/StatsPanel/StatsContainer"]
+layout_mode = 2
+text = "Tick: 0" 

@@ -54,12 +54,20 @@ async fn main() -> Result<()> {
     let config = Config::load(&args.config)?;
     info!("Configuration loaded from {}", args.config);
     
-    // Initialize database connection
-    let db_pool = database::init_pool(&config.database_url).await?;
-    info!("Database connection established");
+    // Initialize database connection (optional for development)
+    let db_pool = match database::init_pool(&config.database.get_connection_url()).await {
+        Ok(pool) => {
+            info!("Database connection established");
+            Some(pool)
+        }
+        Err(e) => {
+            warn!("Database connection failed: {}. Continuing without database.", e);
+            None
+        }
+    };
     
     // Initialize simulation
-    let simulation = Arc::new(RwLock::new(Simulation::new(config.clone(), db_pool.clone(), args.speed)?));
+    let simulation = Arc::new(RwLock::new(Simulation::new(config.clone(), db_pool, args.speed)?));
     info!("Simulation initialized");
     
     // Spawn initial humanoids
@@ -86,12 +94,31 @@ async fn main() -> Result<()> {
         })
     };
     
-    // Start WebSocket server
-    let ws_handle = tokio::spawn(async move {
-        if let Err(e) = websocket_server.start().await {
-            error!("WebSocket server failed: {}", e);
-        }
-    });
+    // Start WebSocket server and periodic updates
+    let ws_handle = {
+        let websocket_server = websocket_server.clone();
+        tokio::spawn(async move {
+            // Start periodic world updates in a separate task
+            let update_websocket = websocket_server.clone();
+            let update_handle = tokio::spawn(async move {
+                let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1));
+                loop {
+                    interval.tick().await;
+                    if let Err(e) = update_websocket.broadcast_world_update().await {
+                        error!("Failed to broadcast world update: {}", e);
+                    }
+                }
+            });
+            
+            // Start WebSocket server
+            if let Err(e) = websocket_server.start().await {
+                error!("WebSocket server failed: {}", e);
+            }
+            
+            // Wait for update handle (this will never complete normally)
+            let _ = update_handle.await;
+        })
+    };
     
     // Wait for both to complete
     tokio::try_join!(sim_handle, ws_handle)?;

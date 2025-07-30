@@ -19,19 +19,20 @@ use self::engine::SimulationEngine;
 use self::world::World;
 use self::events::EventLog;
 
+#[derive(Debug)]
 pub struct Simulation {
     pub engine: SimulationEngine,
     world: Arc<RwLock<World>>,
     event_log: Arc<RwLock<EventLog>>,
     config: Config,
-    db_pool: PgPool,
+    db_pool: Option<PgPool>,
     speed_multiplier: f64,
     tick_count: u64,
     running: bool,
 }
 
 impl Simulation {
-    pub fn new(config: Config, db_pool: PgPool, speed_multiplier: f64) -> Result<Self> {
+    pub fn new(config: Config, db_pool: Option<PgPool>, speed_multiplier: f64) -> Result<Self> {
         let world = Arc::new(RwLock::new(World::new(&config.world)?));
         let event_log = Arc::new(RwLock::new(EventLog::new()));
         
@@ -125,5 +126,23 @@ impl Simulation {
         let events = event_log.get_recent_events(limit);
         let json_events: Vec<serde_json::Value> = events.iter().map(|e| serde_json::to_value(e)).collect::<Result<Vec<_>, _>>()?;
         Ok(json_events)
+    }
+    
+    pub fn set_speed_multiplier(&mut self, speed: f64) {
+        self.speed_multiplier = speed.max(0.1).min(10.0); // Clamp between 0.1x and 10x
+        info!("Simulation speed set to {}x", self.speed_multiplier);
+    }
+    
+    pub fn resume(&mut self) {
+        self.running = true;
+        info!("Simulation resumed at tick {}", self.tick_count);
+    }
+    
+    pub fn is_running(&self) -> bool {
+        self.running
+    }
+    
+    pub fn get_speed_multiplier(&self) -> f64 {
+        self.speed_multiplier
     }
 }
