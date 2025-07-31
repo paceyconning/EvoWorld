@@ -36,6 +36,8 @@ pub enum SkillCategory {
 pub struct Culture {
     pub values: Vec<String>,
     pub traditions: Vec<String>,
+    pub beliefs: Vec<String>,
+    pub art_forms: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -188,14 +190,20 @@ impl Humanoid {
             Culture {
                 values: vec!["Survival".to_string(), "Sharing".to_string()],
                 traditions: vec!["FireMaking".to_string()],
+                beliefs: vec!["SurvivalIsKing".to_string()],
+                art_forms: vec!["PrimitiveArt".to_string()],
             },
             Culture {
                 values: vec!["Strength".to_string(), "Courage".to_string()],
                 traditions: vec!["HuntRitual".to_string()],
+                beliefs: vec!["StrengthOverFear".to_string()],
+                art_forms: vec!["WarriorArt".to_string()],
             },
             Culture {
                 values: vec!["Curiosity".to_string(), "Learning".to_string()],
                 traditions: vec!["Storytelling".to_string()],
+                beliefs: vec!["KnowledgeIsPower".to_string()],
+                art_forms: vec!["StorytellingArt".to_string()],
             },
         ];
         let culture = Some(primitive_cultures[rng.gen_range(0..primitive_cultures.len())].clone());
@@ -421,29 +429,193 @@ impl Humanoid {
             // Update relationship
             self.update_relationship(target_id, 0.1);
             self.social_skills = (self.social_skills + 0.01).min(10.0);
-            // Cultural transmission: share a value or tradition
+            
+            // Enhanced cultural transmission: share values, traditions, and beliefs
             if let (Some(my_culture), Some(target_culture)) = (&mut self.culture, &target.culture) {
                 let mut changed = false;
-                // Share a value
+                
+                // Share values with enhanced probability based on social skills
+                let value_transmission_chance = 0.2 + (self.social_skills * 0.02);
                 if let Some(val) = target_culture.values.iter().choose(&mut rand::thread_rng()) {
-                    if !my_culture.values.contains(val) && rand::random::<f32>() < 0.2 {
+                    if !my_culture.values.contains(val) && rand::random::<f32>() < value_transmission_chance {
                         my_culture.values.push(val.clone());
                         changed = true;
+                        debug!("[CULTURE] {} adopted value '{}' from {}", self.name, val, target.name);
                     }
                 }
-                // Share a tradition
+                
+                // Share traditions with enhanced probability
+                let tradition_transmission_chance = 0.15 + (self.social_skills * 0.015);
                 if let Some(trad) = target_culture.traditions.iter().choose(&mut rand::thread_rng()) {
-                    if !my_culture.traditions.contains(trad) && rand::random::<f32>() < 0.2 {
+                    if !my_culture.traditions.contains(trad) && rand::random::<f32>() < tradition_transmission_chance {
                         my_culture.traditions.push(trad.clone());
                         changed = true;
+                        debug!("[CULTURE] {} adopted tradition '{}' from {}", self.name, trad, target.name);
                     }
                 }
+                
+                // Share beliefs (new feature)
+                let belief_transmission_chance = 0.1 + (self.social_skills * 0.01);
+                if let Some(belief) = target_culture.beliefs.iter().choose(&mut rand::thread_rng()) {
+                    if !my_culture.beliefs.contains(belief) && rand::random::<f32>() < belief_transmission_chance {
+                        my_culture.beliefs.push(belief.clone());
+                        changed = true;
+                        debug!("[CULTURE] {} adopted belief '{}' from {}", self.name, belief, target.name);
+                    }
+                }
+                
+                // Share art forms (new feature)
+                let art_transmission_chance = 0.08 + (self.social_skills * 0.008);
+                if let Some(art) = target_culture.art_forms.iter().choose(&mut rand::thread_rng()) {
+                    if !my_culture.art_forms.contains(art) && rand::random::<f32>() < art_transmission_chance {
+                        my_culture.art_forms.push(art.clone());
+                        changed = true;
+                        debug!("[CULTURE] {} adopted art form '{}' from {}", self.name, art, target.name);
+                    }
+                }
+                
                 if changed {
                     info!("[CULTURE] {} adopted new cultural trait(s) from {} during socialization", self.name, target.name);
                 }
             }
+            
+            // Enhanced social learning: share knowledge and skills
+            self.share_knowledge_with(target, world);
+            self.share_skills_with(target);
+            
+            // Enhanced relationship building
+            self.build_relationship_with(target, world);
+            
+            // Social memory formation
+            self.record_social_memory(target_id, "socialization", 0.3, 0); // TODO: Pass actual tick
         }
         Ok(())
+    }
+    
+    fn share_knowledge_with(&mut self, target: &Humanoid, world: &super::world::World) {
+        // Share knowledge between humanoids
+        let knowledge_sharing_chance = 0.25 + (self.social_skills * 0.02);
+        
+        if rand::random::<f32>() < knowledge_sharing_chance {
+            // Find knowledge that target has that self doesn't
+            for target_knowledge in &target.inventory.knowledge {
+                if !self.inventory.knowledge.iter().any(|k| k.knowledge_type == target_knowledge.knowledge_type) {
+                    // Adopt knowledge from target
+                    self.inventory.knowledge.push(Knowledge {
+                        name: target_knowledge.name.clone(),
+                        knowledge_type: target_knowledge.knowledge_type,
+                        level: target_knowledge.level * 0.8, // Learn at 80% of target's level
+                        description: target_knowledge.description.clone(),
+                        discovery_tick: target_knowledge.discovery_tick,
+                    });
+                    debug!("[KNOWLEDGE] {} learned '{}' from {}", self.name, target_knowledge.name, target.name);
+                    break; // Only learn one piece of knowledge per interaction
+                }
+            }
+        }
+    }
+    
+    fn share_skills_with(&mut self, target: &Humanoid) {
+        // Share skills between humanoids
+        let skill_sharing_chance = 0.2 + (self.social_skills * 0.015);
+        
+        if rand::random::<f32>() < skill_sharing_chance {
+            // Find skills that target has that self doesn't
+            for target_skill in &target.skills {
+                if let Some(self_skill) = self.skills.iter_mut().find(|s| s.name == target_skill.name) {
+                    // Improve existing skill
+                    self_skill.level = (self_skill.level + target_skill.level * 0.1).min(10.0);
+                    debug!("[SKILL] {} improved '{}' skill from {}", self.name, target_skill.name, target.name);
+                } else {
+                    // Learn new skill
+                    self.skills.push(Skill {
+                        name: target_skill.name.clone(),
+                        level: target_skill.level * 0.5, // Start at 50% of target's level
+                        experience: 0.0,
+                        category: target_skill.category,
+                    });
+                    debug!("[SKILL] {} learned '{}' skill from {}", self.name, target_skill.name, target.name);
+                }
+            }
+        }
+    }
+    
+    fn build_relationship_with(&mut self, target: &Humanoid, world: &super::world::World) {
+        // Enhanced relationship building based on personality compatibility
+        let compatibility = self.calculate_personality_compatibility(target);
+        let relationship_change = compatibility * 0.05; // Base change
+        
+        // Additional factors
+        let distance_factor = if (self.position - target.position).length() < 10.0 { 0.02 } else { 0.0 };
+        let age_factor = if (self.age as f32 - target.age as f32).abs() < 10.0 { 0.01 } else { -0.01 };
+        let intelligence_factor = if (self.intelligence - target.intelligence).abs() < 2.0 { 0.01 } else { -0.01 };
+        
+        let total_change = relationship_change + distance_factor + age_factor + intelligence_factor;
+        self.update_relationship(target.id, total_change);
+        
+        // Update relationship type based on strength
+        if let Some(relationship) = self.relationships.iter_mut().find(|r| r.target_id == target.id) {
+            relationship.relationship_type = match relationship.strength {
+                s if s > 0.8 => RelationshipType::Lover,
+                s if s > 0.6 => RelationshipType::Friend,
+                s if s > 0.3 => RelationshipType::Ally,
+                s if s > -0.2 => RelationshipType::Mentor,
+                s if s > -0.5 => RelationshipType::Student,
+                s if s > -0.8 => RelationshipType::Rival,
+                _ => RelationshipType::Enemy,
+            };
+        }
+    }
+    
+    fn calculate_personality_compatibility(&self, target: &Humanoid) -> f32 {
+        // Calculate personality compatibility between humanoids
+        let mut compatibility = 0.0;
+        
+        // Similar curiosity levels
+        let curiosity_diff = (self.personality.curiosity - target.personality.curiosity).abs();
+        compatibility += (1.0 - curiosity_diff) * 0.2;
+        
+        // Similar cooperation levels
+        let cooperation_diff = (self.personality.cooperation - target.personality.cooperation).abs();
+        compatibility += (1.0 - cooperation_diff) * 0.2;
+        
+        // Complementary creativity and technical skills
+        let creativity_complement = (self.personality.creativity + target.personality.creativity) * 0.5;
+        compatibility += creativity_complement * 0.15;
+        
+        // Similar empathy levels
+        let empathy_diff = (self.personality.empathy - target.personality.empathy).abs();
+        compatibility += (1.0 - empathy_diff) * 0.15;
+        
+        // Complementary ambition levels (not too similar, not too different)
+        let ambition_diff = (self.personality.ambition - target.personality.ambition).abs();
+        compatibility += if ambition_diff < 0.3 { 0.1 } else if ambition_diff > 0.7 { 0.05 } else { 0.0 };
+        
+        // Similar adaptability levels
+        let adaptability_diff = (self.personality.adaptability - target.personality.adaptability).abs();
+        compatibility += (1.0 - adaptability_diff) * 0.1;
+        
+        compatibility.clamp(0.0, 1.0)
+    }
+    
+    fn record_social_memory(&mut self, target_id: Uuid, event_type: &str, emotional_impact: f32, tick: u64) {
+        // Record social interaction in memory
+        let memory = Memory {
+            id: Uuid::new_v4(),
+            event_type: event_type.to_string(),
+            description: format!("Social interaction with {}", target_id),
+            emotional_impact,
+            importance: 0.5,
+            timestamp: tick,
+            associated_humanoids: vec![target_id],
+        };
+        
+        self.memories.push(memory);
+        
+        // Limit memory size to prevent unbounded growth
+        if self.memories.len() > 100 {
+            self.memories.remove(0);
+        }
     }
     
     fn learn(&mut self, knowledge_type: KnowledgeType) {

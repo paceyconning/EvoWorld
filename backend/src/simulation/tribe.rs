@@ -2,6 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use tracing::debug;
+use rand::prelude::SliceRandom;
 
 use super::events::Event;
 use super::terrain::Vec2Def;
@@ -75,7 +76,7 @@ pub struct ArtForm {
     pub skill_level: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum SocialHierarchy {
     Egalitarian,
     Meritocratic,
@@ -418,8 +419,11 @@ impl Tribe {
     }
     
     pub fn evolve_culture(&mut self, tick: u64) {
-        // Cultural evolution based on various factors
+        // Enhanced cultural evolution based on various factors
         self.culture.language_complexity += 0.001; // Gradual language development
+        
+        // Cultural transmission between members
+        self.process_cultural_transmission(tick);
         
         // Add new cultural elements based on population and technology
         if self.population > 20 && self.technology_level > 3 {
@@ -430,46 +434,299 @@ impl Tribe {
             self.add_tradition("Annual Gathering", "A yearly celebration of unity", TraditionFrequency::Yearly);
         }
         
-        // Evolve social hierarchy
-        if self.population > 40 {
-            self.culture.social_hierarchy = SocialHierarchy::Democratic;
-        } else if self.population > 20 {
-            self.culture.social_hierarchy = SocialHierarchy::Meritocratic;
+        // Evolve social hierarchy based on population and technology
+        self.evolve_social_hierarchy();
+        
+        // Process cultural diffusion from other tribes
+        self.process_cultural_diffusion(tick);
+        
+        // Generate new art forms and beliefs
+        self.generate_cultural_innovations(tick);
+    }
+    
+    fn process_cultural_transmission(&mut self, tick: u64) {
+        // Cultural transmission between tribe members
+        for i in 0..self.member_ids.len() {
+            for j in (i + 1)..self.member_ids.len() {
+                if rand::random::<f32>() < 0.1 { // 10% chance of interaction
+                    self.transmit_cultural_traits(i, j);
+                }
+            }
+        }
+        
+        // Intergenerational cultural transmission
+        self.process_intergenerational_transmission(tick);
+    }
+    
+    fn transmit_cultural_traits(&mut self, member1: usize, member2: usize) {
+        // Share values
+        if let Some(value) = self.culture.values.iter().collect::<Vec<_>>().choose(&mut rand::thread_rng()) {
+            if rand::random::<f32>() < 0.3 { // 30% chance of adoption
+                // Value transmission logic
+                debug!("Cultural value '{}' transmitted between tribe members", value.name);
+            }
+        }
+        
+        // Share traditions
+        if let Some(tradition) = self.culture.traditions.iter().collect::<Vec<_>>().choose(&mut rand::thread_rng()) {
+            if rand::random::<f32>() < 0.2 { // 20% chance of adoption
+                // Tradition transmission logic
+                debug!("Tradition '{}' transmitted between tribe members", tradition.name);
+            }
+        }
+        
+        // Share beliefs
+        if let Some(belief) = self.culture.beliefs.iter().collect::<Vec<_>>().choose(&mut rand::thread_rng()) {
+            if rand::random::<f32>() < 0.25 { // 25% chance of adoption
+                // Belief transmission logic
+                debug!("Belief '{}' transmitted between tribe members", belief.name);
+            }
+        }
+    }
+    
+    fn process_intergenerational_transmission(&mut self, tick: u64) {
+        // Older members pass knowledge to younger ones
+        let elder_threshold = 40;
+        let youth_threshold = 20;
+        
+        // Find elders and youths
+        let elders: Vec<usize> = self.member_ids.iter().enumerate()
+            .filter(|(_, _)| rand::random::<f32>() < 0.3) // Simulate age-based selection
+            .map(|(i, _)| i)
+            .collect();
+            
+        let youths: Vec<usize> = self.member_ids.iter().enumerate()
+            .filter(|(_, _)| rand::random::<f32>() < 0.4) // Simulate age-based selection
+            .map(|(i, _)| i)
+            .collect();
+            
+        // Intergenerational transmission
+        for elder in &elders {
+            for youth in &youths {
+                if rand::random::<f32>() < 0.15 { // 15% chance of transmission
+                    self.transmit_knowledge(*elder, *youth);
+                }
+            }
+        }
+    }
+    
+    fn transmit_knowledge(&mut self, elder: usize, youth: usize) {
+        // Knowledge transmission from elder to youth
+        if let Some(knowledge) = self.resources.knowledge.iter().collect::<Vec<_>>().choose(&mut rand::thread_rng()) {
+            // Knowledge transmission logic
+            debug!("Knowledge '{}' transmitted from elder to youth", knowledge.description);
+        }
+    }
+    
+    fn evolve_social_hierarchy(&mut self) {
+        // More sophisticated social hierarchy evolution
+        match self.population {
+            p if p > 100 => {
+                if self.technology_level > 8 {
+                    self.culture.social_hierarchy = SocialHierarchy::Democratic;
+                } else {
+                    self.culture.social_hierarchy = SocialHierarchy::Oligarchic;
+                }
+            },
+            p if p > 60 => {
+                if self.technology_level > 6 {
+                    self.culture.social_hierarchy = SocialHierarchy::Meritocratic;
+                } else {
+                    self.culture.social_hierarchy = SocialHierarchy::Hereditary;
+                }
+            },
+            p if p > 30 => {
+                self.culture.social_hierarchy = SocialHierarchy::Meritocratic;
+            },
+            p if p > 10 => {
+                self.culture.social_hierarchy = SocialHierarchy::Meritocratic;
+            },
+            _ => {
+                self.culture.social_hierarchy = SocialHierarchy::Egalitarian;
+            }
+        }
+    }
+    
+    fn process_cultural_diffusion(&mut self, tick: u64) {
+        // Cultural diffusion from other tribes (simulated)
+        if rand::random::<f32>() < 0.05 { // 5% chance of cultural diffusion
+            self.adopt_external_cultural_trait(tick);
+        }
+    }
+    
+    fn adopt_external_cultural_trait(&mut self, tick: u64) {
+        let diffusion_types = vec![
+            ("External Value", "A value adopted from another culture"),
+            ("External Tradition", "A tradition borrowed from neighbors"),
+            ("External Belief", "A belief system from distant lands"),
+            ("External Art Form", "An artistic style from foreign cultures"),
+        ];
+        
+        if let Some((name, description)) = diffusion_types.choose(&mut rand::thread_rng()) {
+            match *name {
+                "External Value" => {
+                    self.add_cultural_value(name, 0.6, description);
+                },
+                "External Tradition" => {
+                    self.add_tradition(name, description, TraditionFrequency::Yearly);
+                },
+                "External Belief" => {
+                    self.add_belief(name, description);
+                },
+                "External Art Form" => {
+                    self.add_art_form(name, description);
+                },
+                _ => {}
+            }
+            debug!("Cultural diffusion: adopted '{}' from external source", name);
+        }
+    }
+    
+    fn generate_cultural_innovations(&mut self, tick: u64) {
+        // Generate new cultural innovations based on technology and population
+        if self.technology_level > 5 && rand::random::<f32>() < 0.1 {
+            self.generate_new_art_form(tick);
+        }
+        
+        if self.population > 25 && rand::random::<f32>() < 0.08 {
+            self.generate_new_belief(tick);
+        }
+        
+        if self.technology_level > 7 && rand::random::<f32>() < 0.05 {
+            self.generate_new_tradition(tick);
+        }
+    }
+    
+    fn generate_new_art_form(&mut self, tick: u64) {
+        let art_forms = vec![
+            ("Sculpture", "Three-dimensional artistic expression"),
+            ("Painting", "Two-dimensional visual art"),
+            ("Music", "Auditory artistic expression"),
+            ("Dance", "Movement-based artistic expression"),
+            ("Poetry", "Verbal artistic expression"),
+            ("Architecture", "Structural artistic expression"),
+        ];
+        
+        if let Some((name, description)) = art_forms.choose(&mut rand::thread_rng()) {
+            self.add_art_form(name, description);
+            debug!("New art form '{}' generated by tribe", name);
+        }
+    }
+    
+    fn generate_new_belief(&mut self, tick: u64) {
+        let beliefs = vec![
+            ("Nature Worship", "Reverence for natural forces and cycles"),
+            ("Ancestor Worship", "Veneration of deceased ancestors"),
+            ("Spirit World", "Belief in supernatural spirits and entities"),
+            ("Cosmic Order", "Belief in a structured universe"),
+            ("Moral Code", "System of ethical principles and values"),
+            ("Divine Guidance", "Belief in supernatural guidance and intervention"),
+        ];
+        
+        if let Some((name, description)) = beliefs.choose(&mut rand::thread_rng()) {
+            self.add_belief(name, description);
+            debug!("New belief '{}' generated by tribe", name);
+        }
+    }
+    
+    fn generate_new_tradition(&mut self, tick: u64) {
+        let traditions = vec![
+            ("Harvest Festival", "Celebration of agricultural abundance"),
+            ("Coming of Age", "Ritual marking transition to adulthood"),
+            ("Seasonal Rites", "Ceremonies aligned with natural cycles"),
+            ("Community Feast", "Shared meal strengthening social bonds"),
+            ("Storytelling Night", "Oral tradition and knowledge sharing"),
+            ("Crafting Ceremony", "Ritual celebration of skilled work"),
+        ];
+        
+        if let Some((name, description)) = traditions.choose(&mut rand::thread_rng()) {
+            self.add_tradition(name, description, TraditionFrequency::Yearly);
+            debug!("New tradition '{}' generated by tribe", name);
         }
     }
     
     pub fn update_relationship_with(&mut self, other_tribe: &mut Tribe, tick: u64) {
-        // Find existing relationship or create new one
+        // Enhanced relationship management with more sophisticated logic
         let relationship_index = self.relationships
             .iter()
             .position(|r| r.target_tribe_id == other_tribe.id);
         
         if let Some(index) = relationship_index {
-            // Update existing relationship
-            let relationship = &mut self.relationships[index];
-            
-            // Update relationship based on various factors
+            // Calculate relationship factors before borrowing
             let distance = (self.center_position - other_tribe.center_position).length();
+            let cultural_similarity = self.calculate_cultural_similarity(other_tribe);
+            let resource_competition = self.calculate_resource_competition(other_tribe);
+            let technological_gap = (self.technology_level as f32 - other_tribe.technology_level as f32).abs();
             
-            if distance < 30.0 {
-                // Close proximity - potential for conflict or cooperation
-                if rand::random::<f32>() < 0.1 {
-                    relationship.strength += 0.1; // Cooperation
-                } else if rand::random::<f32>() < 0.05 {
-                    relationship.strength -= 0.1; // Conflict
-                }
+            // Update relationship based on multiple factors
+            let mut relationship_change = 0.0;
+            
+            // Distance factor
+            if distance < 20.0 {
+                relationship_change += 0.05; // Cooperation due to proximity
+            } else if distance > 50.0 {
+                relationship_change -= 0.02; // Distance reduces interaction
             }
             
-            // Clamp relationship strength
+            // Cultural similarity factor
+            relationship_change += cultural_similarity * 0.1;
+            
+            // Resource competition factor
+            relationship_change -= resource_competition * 0.15;
+            
+            // Technological gap factor
+            if technological_gap > 3.0 {
+                relationship_change -= 0.05; // Large tech gaps create tension
+            } else if technological_gap < 1.0 {
+                relationship_change += 0.03; // Similar tech levels foster cooperation
+            }
+            
+            // Random events
+            if rand::random::<f32>() < 0.05 {
+                relationship_change += (rand::random::<f32>() - 0.5) * 0.2; // Random events
+            }
+            
+            // Apply relationship change
+            let relationship = &mut self.relationships[index];
+            relationship.strength += relationship_change;
             relationship.strength = relationship.strength.clamp(-1.0, 1.0);
+            
+            // Update trust based on relationship strength
+            if relationship.strength > 0.0 {
+                relationship.trust += 0.01;
+            } else {
+                relationship.trust -= 0.01;
+            }
+            relationship.trust = relationship.trust.clamp(0.0, 1.0);
             
             // Update relationship type based on strength
             relationship.relationship_type = match relationship.strength {
-                s if s > 0.7 => TribeRelationshipType::Ally,
-                s if s > 0.3 => TribeRelationshipType::Neutral,
-                s if s > -0.3 => TribeRelationshipType::Rival,
+                s if s > 0.8 => TribeRelationshipType::Ally,
+                s if s > 0.4 => TribeRelationshipType::Neutral,
+                s if s > -0.2 => TribeRelationshipType::Rival,
                 _ => TribeRelationshipType::Enemy,
             };
+            
+            // Handle conflicts and alliances (separate call to avoid borrowing issues)
+            let target_tribe_id = other_tribe.id;
+            let should_initiate_conflict = relationship.strength < -0.7 && relationship.trust < 0.3 && rand::random::<f32>() < 0.1;
+            let should_form_alliance = relationship.strength > 0.7 && relationship.trust > 0.7 && rand::random::<f32>() < 0.05;
+            let should_negotiate_trade = relationship.strength > 0.3 && relationship.trust > 0.5 && rand::random::<f32>() < 0.08;
+            
+            // Release the borrow before calling other methods
+            drop(relationship);
+            
+            if should_initiate_conflict {
+                self.initiate_conflict(target_tribe_id, tick);
+            }
+            
+            if should_form_alliance {
+                self.form_alliance(target_tribe_id, tick);
+            }
+            
+            if should_negotiate_trade {
+                self.negotiate_trade_agreement(target_tribe_id, tick);
+            }
         } else {
             // Create new relationship
             let new_rel = TribeRelationship {
@@ -483,6 +740,152 @@ impl Tribe {
             self.relationships.push(new_rel);
         }
     }
+    
+    fn calculate_cultural_similarity(&self, other_tribe: &Tribe) -> f32 {
+        // Calculate cultural similarity between tribes
+        let mut similarity = 0.0;
+        let mut total_comparisons = 0;
+        
+        // Compare social hierarchies
+        if self.culture.social_hierarchy == other_tribe.culture.social_hierarchy {
+            similarity += 0.3;
+        }
+        total_comparisons += 1;
+        
+        // Compare language complexity (simplified)
+        let lang_diff = (self.culture.language_complexity - other_tribe.culture.language_complexity).abs();
+        if lang_diff < 0.1 {
+            similarity += 0.2;
+        }
+        total_comparisons += 1;
+        
+        // Compare technology levels
+        let tech_diff = (self.technology_level as f32 - other_tribe.technology_level as f32).abs();
+        if tech_diff < 2.0 {
+            similarity += 0.2;
+        }
+        total_comparisons += 1;
+        
+        // Compare population sizes
+        let pop_diff = (self.population as f32 - other_tribe.population as f32).abs();
+        let avg_pop = (self.population + other_tribe.population) as f32 / 2.0;
+        if avg_pop > 0.0 && (pop_diff / avg_pop) < 0.5 {
+            similarity += 0.1;
+        }
+        total_comparisons += 1;
+        
+        similarity / total_comparisons as f32
+    }
+    
+    fn calculate_resource_competition(&self, other_tribe: &Tribe) -> f32 {
+        // Calculate resource competition between tribes
+        let distance = (self.center_position - other_tribe.center_position).length();
+        
+        // Higher competition for closer tribes
+        if distance < 30.0 {
+            return 0.8;
+        } else if distance < 60.0 {
+            return 0.4;
+        } else {
+            return 0.1;
+        }
+    }
+    
+    fn handle_conflicts_and_alliances(&mut self, relationship: &mut TribeRelationship, other_tribe: &mut Tribe, tick: u64) {
+        // Handle conflicts
+        if relationship.strength < -0.7 && relationship.trust < 0.3 {
+            if rand::random::<f32>() < 0.1 { // 10% chance of conflict
+                self.initiate_conflict(other_tribe.id, tick);
+            }
+        }
+        
+        // Handle alliances
+        if relationship.strength > 0.7 && relationship.trust > 0.7 {
+            if rand::random::<f32>() < 0.05 { // 5% chance of alliance
+                self.form_alliance(other_tribe.id, tick);
+            }
+        }
+        
+        // Handle trade agreements
+        if relationship.strength > 0.3 && relationship.trust > 0.5 {
+            if rand::random::<f32>() < 0.08 { // 8% chance of trade agreement
+                self.negotiate_trade_agreement(other_tribe.id, tick);
+            }
+        }
+    }
+    
+    fn initiate_conflict(&mut self, target_tribe_id: Uuid, tick: u64) {
+        let conflict = Conflict {
+            id: Uuid::new_v4(),
+            conflict_type: ConflictType::Resource, // Default to resource conflict
+            start_tick: tick,
+            end_tick: None,
+            casualties: 0,
+            resolution: None,
+        };
+        
+        // Add conflict to relationship
+        if let Some(relationship) = self.relationships.iter_mut()
+            .find(|r| r.target_tribe_id == target_tribe_id) {
+            relationship.conflicts.push(conflict);
+            debug!("Conflict initiated with tribe {}", target_tribe_id);
+        }
+    }
+    
+    fn form_alliance(&mut self, ally_tribe_id: Uuid, tick: u64) {
+        // Form alliance with another tribe
+        if let Some(relationship) = self.relationships.iter_mut()
+            .find(|r| r.target_tribe_id == ally_tribe_id) {
+            relationship.relationship_type = TribeRelationshipType::Ally;
+            relationship.strength = 0.9; // Strong alliance
+            relationship.trust = 0.9;
+            debug!("Alliance formed with tribe {}", ally_tribe_id);
+        }
+    }
+    
+    fn negotiate_trade_agreement(&mut self, partner_tribe_id: Uuid, tick: u64) {
+        // Negotiate trade agreement
+        let trade_items = vec![
+            TradeItem { name: "Food".to_string(), quantity: 10.0, value: 1.0 },
+            TradeItem { name: "Tools".to_string(), quantity: 5.0, value: 2.0 },
+            TradeItem { name: "Materials".to_string(), quantity: 15.0, value: 1.5 },
+        ];
+        
+        let agreement = TradeAgreement {
+            id: Uuid::new_v4(),
+            items: trade_items,
+            frequency: "Monthly".to_string(),
+            established_at: tick,
+        };
+        
+        if let Some(relationship) = self.relationships.iter_mut()
+            .find(|r| r.target_tribe_id == partner_tribe_id) {
+            relationship.trade_agreements.push(agreement);
+            debug!("Trade agreement established with tribe {}", partner_tribe_id);
+        }
+    }
+    
+    fn add_belief(&mut self, name: &str, description: &str) {
+        let belief = Belief {
+            name: name.to_string(),
+            description: description.to_string(),
+            believers: self.member_ids.clone(),
+            strength: 0.7,
+        };
+        self.culture.beliefs.push(belief);
+    }
+    
+    fn add_art_form(&mut self, name: &str, description: &str) {
+        let art_form = ArtForm {
+            name: name.to_string(),
+            description: description.to_string(),
+            practitioners: self.member_ids.iter().take(self.member_ids.len() / 4).cloned().collect(),
+            skill_level: 0.5,
+        };
+        self.culture.art_forms.push(art_form);
+    }
+    
+
     
     fn analyze_situation(&self, world: &super::world::World) -> Result<TribeSituation> {
         Ok(TribeSituation {

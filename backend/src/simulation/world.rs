@@ -259,6 +259,191 @@ impl World {
             }
         }
         
+        // Check for cultural events
+        for tribe in &self.tribes {
+            if tribe.population > 10 {
+                // Cultural festivals and ceremonies
+                if rand::random::<f32>() < 0.05 { // 5% chance per tick
+                    events.push(Event::new(
+                        "cultural_festival",
+                        &format!("{} celebrates a cultural festival", tribe.name),
+                        tribe.member_ids.clone(),
+                        Some((tribe.center_position.x.into(), tribe.center_position.y.into())),
+                        0.7,
+                        tick,
+                    ));
+                }
+                
+                // Coming of age ceremonies
+                if rand::random::<f32>() < 0.03 { // 3% chance per tick
+                    events.push(Event::new(
+                        "coming_of_age",
+                        &format!("{} holds a coming of age ceremony", tribe.name),
+                        tribe.member_ids.iter().take(tribe.member_ids.len() / 3).cloned().collect(),
+                        Some((tribe.center_position.x.into(), tribe.center_position.y.into())),
+                        0.6,
+                        tick,
+                    ));
+                }
+                
+                // Knowledge sharing events
+                if tribe.technology_level > 3 && rand::random::<f32>() < 0.04 {
+                    events.push(Event::new(
+                        "knowledge_sharing",
+                        &format!("{} shares knowledge and traditions", tribe.name),
+                        tribe.member_ids.clone(),
+                        Some((tribe.center_position.x.into(), tribe.center_position.y.into())),
+                        0.8,
+                        tick,
+                    ));
+                }
+            }
+        }
+        
+        // Check for inter-tribe social events
+        for i in 0..self.tribes.len() {
+            for j in (i + 1)..self.tribes.len() {
+                let tribe1 = &self.tribes[i];
+                let tribe2 = &self.tribes[j];
+                
+                let distance = (tribe1.center_position - tribe2.center_position).length();
+                
+                if distance < 60.0 {
+                    // Tribes are close enough for social interaction
+                    
+                    // Trade meetings
+                    if rand::random::<f32>() < 0.03 { // 3% chance per tick
+                        events.push(Event::new(
+                            "trade_meeting",
+                            &format!("{} and {} meet for trade negotiations", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.6,
+                            tick,
+                        ));
+                    }
+                    
+                    // Cultural exchange
+                    if rand::random::<f32>() < 0.02 { // 2% chance per tick
+                        events.push(Event::new(
+                            "cultural_exchange",
+                            &format!("{} and {} exchange cultural practices", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.7,
+                            tick,
+                        ));
+                    }
+                    
+                    // Diplomatic meetings
+                    if rand::random::<f32>() < 0.02 { // 2% chance per tick
+                        events.push(Event::new(
+                            "diplomatic_meeting",
+                            &format!("{} and {} hold diplomatic talks", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.8,
+                            tick,
+                        ));
+                    }
+                }
+            }
+        }
+        
+        // Check for social hierarchy changes
+        for tribe in &self.tribes {
+            if tribe.population > 20 {
+                // Leadership changes
+                if rand::random::<f32>() < 0.01 { // 1% chance per tick
+                    events.push(Event::new(
+                        "leadership_change",
+                        &format!("{} experiences a change in leadership", tribe.name),
+                        tribe.member_ids.clone(),
+                        Some((tribe.center_position.x.into(), tribe.center_position.y.into())),
+                        0.9,
+                        tick,
+                    ));
+                }
+                
+                // Social structure evolution
+                if tribe.population > 40 && rand::random::<f32>() < 0.005 { // 0.5% chance per tick
+                    events.push(Event::new(
+                        "social_evolution",
+                        &format!("{} evolves its social structure", tribe.name),
+                        tribe.member_ids.clone(),
+                        Some((tribe.center_position.x.into(), tribe.center_position.y.into())),
+                        0.8,
+                        tick,
+                    ));
+                }
+            }
+        }
+        
+        // Check for social conflicts and resolutions
+        for i in 0..self.tribes.len() {
+            for j in (i + 1)..self.tribes.len() {
+                let tribe1 = &self.tribes[i];
+                let tribe2 = &self.tribes[j];
+                
+                let distance = (tribe1.center_position - tribe2.center_position).length();
+                
+                if distance < 50.0 {
+                    // Social conflicts
+                    if rand::random::<f32>() < 0.02 { // 2% chance per tick
+                        events.push(Event::new(
+                            "social_conflict",
+                            &format!("Social tension rises between {} and {}", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.7,
+                            tick,
+                        ));
+                    }
+                    
+                    // Conflict resolution
+                    if rand::random::<f32>() < 0.015 { // 1.5% chance per tick
+                        events.push(Event::new(
+                            "conflict_resolution",
+                            &format!("{} and {} resolve their differences", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.8,
+                            tick,
+                        ));
+                    }
+                }
+            }
+        }
+        
+        // Check for social innovations
+        for tribe in &self.tribes {
+            if tribe.technology_level > 5 && tribe.population > 15 {
+                // New social practices
+                if rand::random::<f32>() < 0.01 { // 1% chance per tick
+                    events.push(Event::new(
+                        "social_innovation",
+                        &format!("{} develops new social practices", tribe.name),
+                        tribe.member_ids.clone(),
+                        Some((tribe.center_position.x.into(), tribe.center_position.y.into())),
+                        0.8,
+                        tick,
+                    ));
+                }
+                
+                // Educational systems
+                if tribe.technology_level > 7 && rand::random::<f32>() < 0.005 {
+                    events.push(Event::new(
+                        "education_system",
+                        &format!("{} establishes an educational system", tribe.name),
+                        tribe.member_ids.clone(),
+                        Some((tribe.center_position.x.into(), tribe.center_position.y.into())),
+                        0.9,
+                        tick,
+                    ));
+                }
+            }
+        }
+        
         Ok(events)
     }
     
@@ -302,16 +487,230 @@ impl World {
                 let distance = (tribe1.center_position - tribe2.center_position).length();
                 
                 if distance < 50.0 {
-                    // Tribes are close, potential for conflict
-                    let conflict_probability = 0.1; // Base probability
+                    // Tribes are close, potential for various types of conflicts
                     
-                    if rand::random::<f32>() < conflict_probability {
+                    // Resource conflicts
+                    let resource_conflict_probability = 0.08; // Base probability
+                    if rand::random::<f32>() < resource_conflict_probability {
                         events.push(Event::new(
-                            "tribe_conflict",
-                            &format!("Conflict erupts between {} and {}", tribe1.name, tribe2.name),
+                            "resource_conflict",
+                            &format!("{} and {} clash over resources", tribe1.name, tribe2.name),
                             vec![tribe1.id, tribe2.id],
                             Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
                             0.8,
+                            tick,
+                        ));
+                    }
+                    
+                    // Cultural conflicts
+                    let cultural_conflict_probability = 0.05;
+                    if rand::random::<f32>() < cultural_conflict_probability {
+                        events.push(Event::new(
+                            "cultural_conflict",
+                            &format!("{} and {} clash over cultural differences", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.7,
+                            tick,
+                        ));
+                    }
+                    
+                    // Territorial conflicts
+                    let territorial_conflict_probability = 0.06;
+                    if rand::random::<f32>() < territorial_conflict_probability {
+                        events.push(Event::new(
+                            "territorial_conflict",
+                            &format!("{} and {} dispute territory boundaries", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.8,
+                            tick,
+                        ));
+                    }
+                    
+                    // Religious conflicts
+                    if tribe1.technology_level > 4 && tribe2.technology_level > 4 {
+                        let religious_conflict_probability = 0.03;
+                        if rand::random::<f32>() < religious_conflict_probability {
+                            events.push(Event::new(
+                                "religious_conflict",
+                                &format!("{} and {} clash over religious beliefs", tribe1.name, tribe2.name),
+                                vec![tribe1.id, tribe2.id],
+                                Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                                0.9,
+                                tick,
+                            ));
+                        }
+                    }
+                    
+                    // Political conflicts
+                    if tribe1.population > 30 && tribe2.population > 30 {
+                        let political_conflict_probability = 0.04;
+                        if rand::random::<f32>() < political_conflict_probability {
+                            events.push(Event::new(
+                                "political_conflict",
+                                &format!("{} and {} engage in political rivalry", tribe1.name, tribe2.name),
+                                vec![tribe1.id, tribe2.id],
+                                Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                                0.8,
+                                tick,
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Check for conflict resolutions
+        for i in 0..self.tribes.len() {
+            for j in (i + 1)..self.tribes.len() {
+                let tribe1 = &self.tribes[i];
+                let tribe2 = &self.tribes[j];
+                
+                let distance = (tribe1.center_position - tribe2.center_position).length();
+                
+                if distance < 60.0 {
+                    // Peace negotiations
+                    let peace_probability = 0.03;
+                    if rand::random::<f32>() < peace_probability {
+                        events.push(Event::new(
+                            "peace_negotiation",
+                            &format!("{} and {} negotiate peace", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.8,
+                            tick,
+                        ));
+                    }
+                    
+                    // Treaty formations
+                    let treaty_probability = 0.02;
+                    if rand::random::<f32>() < treaty_probability {
+                        events.push(Event::new(
+                            "treaty_formation",
+                            &format!("{} and {} form a treaty", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.9,
+                            tick,
+                        ));
+                    }
+                }
+            }
+        }
+        
+        // Check for alliance formations
+        for i in 0..self.tribes.len() {
+            for j in (i + 1)..self.tribes.len() {
+                let tribe1 = &self.tribes[i];
+                let tribe2 = &self.tribes[j];
+                
+                let distance = (tribe1.center_position - tribe2.center_position).length();
+                
+                if distance < 70.0 {
+                    // Defensive alliances
+                    let defensive_alliance_probability = 0.015;
+                    if rand::random::<f32>() < defensive_alliance_probability {
+                        events.push(Event::new(
+                            "defensive_alliance",
+                            &format!("{} and {} form a defensive alliance", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.9,
+                            tick,
+                        ));
+                    }
+                    
+                    // Economic alliances
+                    let economic_alliance_probability = 0.02;
+                    if rand::random::<f32>() < economic_alliance_probability {
+                        events.push(Event::new(
+                            "economic_alliance",
+                            &format!("{} and {} form an economic alliance", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.8,
+                            tick,
+                        ));
+                    }
+                    
+                    // Cultural alliances
+                    let cultural_alliance_probability = 0.01;
+                    if rand::random::<f32>() < cultural_alliance_probability {
+                        events.push(Event::new(
+                            "cultural_alliance",
+                            &format!("{} and {} form a cultural alliance", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.7,
+                            tick,
+                        ));
+                    }
+                }
+            }
+        }
+        
+        // Check for internal conflicts within tribes
+        for tribe in &self.tribes {
+            if tribe.population > 20 {
+                // Internal power struggles
+                let internal_conflict_probability = 0.02;
+                if rand::random::<f32>() < internal_conflict_probability {
+                    events.push(Event::new(
+                        "internal_conflict",
+                        &format!("{} experiences internal conflict", tribe.name),
+                        tribe.member_ids.clone(),
+                        Some((tribe.center_position.x.into(), tribe.center_position.y.into())),
+                        0.7,
+                        tick,
+                    ));
+                }
+                
+                // Succession disputes
+                if tribe.population > 40 && rand::random::<f32>() < 0.01 {
+                    events.push(Event::new(
+                        "succession_dispute",
+                        &format!("{} faces a succession dispute", tribe.name),
+                        tribe.member_ids.clone(),
+                        Some((tribe.center_position.x.into(), tribe.center_position.y.into())),
+                        0.8,
+                        tick,
+                    ));
+                }
+            }
+        }
+        
+        // Check for conflict escalation and de-escalation
+        for i in 0..self.tribes.len() {
+            for j in (i + 1)..self.tribes.len() {
+                let tribe1 = &self.tribes[i];
+                let tribe2 = &self.tribes[j];
+                
+                let distance = (tribe1.center_position - tribe2.center_position).length();
+                
+                if distance < 50.0 {
+                    // Conflict escalation
+                    let escalation_probability = 0.02;
+                    if rand::random::<f32>() < escalation_probability {
+                        events.push(Event::new(
+                            "conflict_escalation",
+                            &format!("Conflict between {} and {} escalates", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.9,
+                            tick,
+                        ));
+                    }
+                    
+                    // Conflict de-escalation
+                    let deescalation_probability = 0.025;
+                    if rand::random::<f32>() < deescalation_probability {
+                        events.push(Event::new(
+                            "conflict_deescalation",
+                            &format!("Tensions between {} and {} decrease", tribe1.name, tribe2.name),
+                            vec![tribe1.id, tribe2.id],
+                            Some((((tribe1.center_position + tribe2.center_position) * 0.5).x.into(), ((tribe1.center_position + tribe2.center_position) * 0.5).y.into())),
+                            0.7,
                             tick,
                         ));
                     }
