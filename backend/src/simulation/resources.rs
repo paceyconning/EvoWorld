@@ -732,15 +732,7 @@ impl ResourceManager {
     }
     
     pub fn update_resources(&mut self, world: &mut super::world::World, tick: u64) -> Result<usize> {
-        debug!("Updating resources at tick {}", tick);
-        
-        let mut resources_updated = 0;
-        
-        // Update resource regeneration
-        for resource in &mut self.resources {
-            resource.regenerate(tick);
-            resources_updated += 1;
-        }
+        let mut new_resources_count = 0;
         
         // Update environmental impact
         self.update_environmental_impact(world, tick)?;
@@ -754,17 +746,16 @@ impl ResourceManager {
         // Update resource migration
         self.update_resource_migration(world, tick)?;
         
-        // Generate new resources based on conditions
-        let new_resources = self.generate_new_resources(world, tick)?;
-        resources_updated += new_resources;
+        // Generate new resources based on ecosystem health
+        new_resources_count += self.generate_ecosystem_resources(world, tick)?;
         
         // Clean up depleted resources
         let depleted_count = self.cleanup_depleted_resources();
         
-        debug!("Updated {} resources, generated {} new, removed {} depleted", 
-               resources_updated, new_resources, depleted_count);
+        debug!("Updated {} resources, generated {} new, cleaned up {} depleted", 
+               self.resources.len(), new_resources_count, depleted_count);
         
-        Ok(resources_updated)
+        Ok(new_resources_count)
     }
     
     pub fn update_environmental_impact(&mut self, world: &super::world::World, tick: u64) -> Result<()> {
@@ -1053,29 +1044,216 @@ impl ResourceManager {
         )
     }
     
-    fn generate_new_resources(&mut self, world: &super::world::World, tick: u64) -> Result<usize> {
-        // Generate new resources based on terrain conditions
+    fn generate_ecosystem_resources(&mut self, world: &super::world::World, tick: u64) -> Result<usize> {
         let mut rng = rand::thread_rng();
         let mut new_resources_count = 0;
         
-        // Check if we should generate new resources
-        if tick % 1000 == 0 { // Every 1000 ticks
-            let new_resource_count = (world.humanoids.len() as f32 * 0.1) as usize;
+        // Base resource generation rate
+        let base_rate = 0.01; // 1% chance per tick
+        
+        // Adjust based on ecosystem health
+        let ecosystem_health = world.ecosystem.health;
+        let adjusted_rate = base_rate * ecosystem_health;
+        
+        // Adjust based on biodiversity
+        let biodiversity_factor = world.biodiversity.species_diversity_index;
+        let final_rate = adjusted_rate * (0.5 + biodiversity_factor * 0.5);
+        
+        // Generate resources based on ecosystem health
+        if rng.gen::<f32>() < final_rate {
+            let resource_type = self.select_ecosystem_resource_type(world, &mut rng);
+            let position = self.generate_ecosystem_position(world, &mut rng);
             
-            for _ in 0..new_resource_count {
-                let resource_type = self.select_random_resource_type(&mut rng);
-                let position = self.generate_random_position(&world.config, &mut rng);
-                let quantity = self.generate_quantity(&resource_type, &mut rng);
-                let quality = self.generate_quality(&resource_type, &mut rng);
-                let is_renewable = self.is_renewable_resource(&resource_type);
+            if let Some(pos) = position {
+                let quantity = self.generate_ecosystem_quantity(&resource_type, world, &mut rng);
+                let quality = self.generate_ecosystem_quality(&resource_type, world, &mut rng);
                 
-                let resource = Resource::new(resource_type, position, quantity, quality, is_renewable);
+                let mut resource = Resource::new(
+                    resource_type,
+                    pos,
+                    quantity,
+                    quality,
+                    self.is_renewable_resource(&resource_type),
+                );
+                
+                // Configure ecosystem-specific properties
+                self.configure_ecosystem_resource_properties(&mut resource, &resource_type, world, &mut rng);
+                
                 self.resources.push(resource);
                 new_resources_count += 1;
             }
         }
         
         Ok(new_resources_count)
+    }
+
+    fn select_ecosystem_resource_type(&self, world: &super::world::World, rng: &mut rand::rngs::ThreadRng) -> ResourceType {
+        let ecosystem_health = world.ecosystem.health;
+        let biodiversity = world.biodiversity.species_diversity_index;
+        
+        // Weight resource types based on ecosystem health and biodiversity
+        let mut resource_weights = vec![
+            (ResourceType::Food, 0.3),
+            (ResourceType::Water, 0.2),
+            (ResourceType::Wood, 0.15),
+            (ResourceType::Herbs, 0.1),
+            (ResourceType::Berries, 0.1),
+            (ResourceType::Meat, 0.05),
+            (ResourceType::Fish, 0.05),
+            (ResourceType::Honey, 0.02),
+            (ResourceType::Fruit, 0.02),
+            (ResourceType::Vegetables, 0.01),
+        ];
+        
+        // Adjust weights based on ecosystem health
+        for (_, weight) in &mut resource_weights {
+            *weight *= ecosystem_health;
+        }
+        
+        // Add rare resources based on biodiversity
+        if biodiversity > 0.7 {
+            resource_weights.extend_from_slice(&[
+                (ResourceType::Gems, 0.01),
+                (ResourceType::Amber, 0.01),
+                (ResourceType::Jade, 0.01),
+            ]);
+        }
+        
+        // Select resource type based on weights
+        let total_weight: f32 = resource_weights.iter().map(|(_, w)| w).sum();
+        let random_value = rng.gen::<f32>() * total_weight;
+        
+        let mut cumulative_weight = 0.0;
+        for (resource_type, weight) in resource_weights {
+            cumulative_weight += weight;
+            if random_value <= cumulative_weight {
+                return resource_type;
+            }
+        }
+        
+        ResourceType::Food // Default fallback
+    }
+
+    fn generate_ecosystem_position(&self, world: &super::world::World, rng: &mut rand::rngs::ThreadRng) -> Option<Vec2Def> {
+        let max_attempts = 10;
+        
+        for _ in 0..max_attempts {
+            let x = rng.gen_range(0.0..world.config.world_size.0 as f32);
+            let y = rng.gen_range(0.0..world.config.world_size.1 as f32);
+            let position = Vec2Def::new(x, y);
+            
+            // Check if position is suitable based on ecosystem health
+            if self.is_suitable_ecosystem_position(position, world) {
+                return Some(position);
+            }
+        }
+        
+        None
+    }
+
+    fn is_suitable_ecosystem_position(&self, position: Vec2Def, world: &super::world::World) -> bool {
+        // Check if position is near biodiversity hotspots
+        for hotspot in &world.biodiversity.biodiversity_hotspots {
+            let distance = (position - hotspot.position).length();
+            if distance <= hotspot.radius {
+                return true;
+            }
+        }
+        
+        // Check if position is away from pollution sources
+        for source in &world.pollution.pollution_sources {
+            let distance = (position - source.position).length();
+            if distance <= source.radius {
+                return false; // Avoid polluted areas
+            }
+        }
+        
+        // Check if position is away from impact zones
+        for zone in &world.environmental_impact.impact_zones {
+            let distance = (position - zone.position).length();
+            if distance <= zone.radius {
+                return false; // Avoid impacted areas
+            }
+        }
+        
+        true
+    }
+
+    fn generate_ecosystem_quantity(&self, resource_type: &ResourceType, world: &super::world::World, rng: &mut rand::rngs::ThreadRng) -> f32 {
+        let base_quantity = self.generate_quantity(resource_type, rng);
+        let ecosystem_health = world.ecosystem.health;
+        let biodiversity = world.biodiversity.species_diversity_index;
+        
+        // Adjust quantity based on ecosystem factors
+        let ecosystem_multiplier = 0.5 + ecosystem_health * 0.5;
+        let biodiversity_multiplier = 0.8 + biodiversity * 0.4;
+        
+        let final_quantity = base_quantity * ecosystem_multiplier * biodiversity_multiplier;
+        
+        // Add some randomness
+        let random_factor = rng.gen_range(0.8..1.2);
+        
+        final_quantity * random_factor
+    }
+
+    fn generate_ecosystem_quality(&self, resource_type: &ResourceType, world: &super::world::World, rng: &mut rand::rngs::ThreadRng) -> f32 {
+        let base_quality = self.generate_quality(resource_type, rng);
+        let ecosystem_health = world.ecosystem.health;
+        let biodiversity = world.biodiversity.species_diversity_index;
+        
+        // Adjust quality based on ecosystem factors
+        let ecosystem_multiplier = 0.7 + ecosystem_health * 0.3;
+        let biodiversity_multiplier = 0.9 + biodiversity * 0.1;
+        
+        let final_quality = base_quality * ecosystem_multiplier * biodiversity_multiplier;
+        
+        final_quality.min(1.0)
+    }
+
+    fn configure_ecosystem_resource_properties(&self, resource: &mut Resource, resource_type: &ResourceType, world: &super::world::World, rng: &mut rand::rngs::ThreadRng) {
+        let ecosystem_health = world.ecosystem.health;
+        let biodiversity = world.biodiversity.species_diversity_index;
+        
+        // Adjust environmental impact based on ecosystem health
+        resource.environmental_impact *= (1.0 - ecosystem_health * 0.3).max(0.1);
+        
+        // Adjust renewal rate based on biodiversity
+        resource.renewal_rate *= (0.8 + biodiversity * 0.4);
+        
+        // Adjust competition level based on ecosystem health
+        resource.competition_level *= (1.0 - ecosystem_health * 0.2).max(0.5);
+        
+        // Set seasonal availability based on ecosystem health
+        resource.seasonal_availability.seasonal_multiplier *= ecosystem_health;
+        
+        // Adjust rarity based on biodiversity
+        if biodiversity > 0.8 {
+            resource.resource_rarity = ResourceRarity::Rare;
+        } else if biodiversity > 0.6 {
+            resource.resource_rarity = ResourceRarity::Uncommon;
+        }
+    }
+
+    pub fn update_ecosystem_impact(&mut self, world: &super::world::World, tick: u64) -> Result<()> {
+        // Update environmental health based on resource harvesting
+        let total_harvesting_impact: f32 = self.resources.iter()
+            .map(|r| r.environmental_impact * r.competition_level)
+            .sum();
+        
+        self.environmental_health = (self.environmental_health - total_harvesting_impact * 0.001).max(0.0);
+        
+        // Natural recovery
+        self.environmental_health = (self.environmental_health + 0.001).min(1.0);
+        
+        // Update ecosystem health in world
+        let ecosystem_health = world.ecosystem.health;
+        let impact_factor = (1.0 - total_harvesting_impact * 0.01).max(0.0);
+        
+        // This would need to be done through a mutable reference to world
+        // For now, we'll track it in the resource manager
+        self.environmental_health = ecosystem_health * impact_factor;
+        
+        Ok(())
     }
     
     pub fn get_resource_statistics(&self) -> ResourceStatistics {

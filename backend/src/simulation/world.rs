@@ -4,6 +4,8 @@ use uuid::Uuid;
 use glam::Vec2;
 use tracing::{debug, info};
 use std::collections::HashMap;
+use rand::prelude::SliceRandom;
+use rand::Rng;
 
 use crate::config::WorldConfig;
 use super::humanoid::Humanoid;
@@ -24,6 +26,12 @@ pub struct World {
     pub events: Vec<Event>,
     pub buildings: Vec<Building>,
     pub structures: Vec<Structure>,
+    // Enhanced environmental systems
+    pub ecosystem: Ecosystem,
+    pub climate_change: ClimateChange,
+    pub environmental_impact: EnvironmentalImpact,
+    pub pollution: Pollution,
+    pub biodiversity: Biodiversity,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -104,6 +112,256 @@ pub enum StructureType {
     Tower,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Ecosystem {
+    pub health: f32, // 0.0 (collapsed) to 1.0 (thriving)
+    pub stability: f32, // How stable the ecosystem is
+    pub species_diversity: f32, // Biodiversity index
+    pub food_web_complexity: f32, // Complexity of food web
+    pub carrying_capacity: f32, // Maximum sustainable population
+    pub regeneration_rate: f32, // How fast ecosystem recovers
+    pub stress_factors: Vec<EcosystemStress>,
+    pub recovery_mechanisms: Vec<EcosystemRecovery>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EcosystemStress {
+    pub stress_type: StressType,
+    pub intensity: f32, // 0.0 to 1.0
+    pub duration: u64, // How long the stress has been active
+    pub location: Vec2Def,
+    pub impact_radius: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum StressType {
+    Overharvesting,
+    Pollution,
+    ClimateChange,
+    HabitatDestruction,
+    InvasiveSpecies,
+    Disease,
+    NaturalDisaster,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EcosystemRecovery {
+    pub recovery_type: RecoveryType,
+    pub effectiveness: f32, // 0.0 to 1.0
+    pub duration: u64, // How long recovery takes
+    pub cost: f32, // Resource cost of recovery
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RecoveryType {
+    NaturalRegeneration,
+    AssistedRecovery,
+    SpeciesReintroduction,
+    HabitatRestoration,
+    PollutionCleanup,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClimateChange {
+    pub global_temperature_change: f32, // Degrees Celsius change
+    pub sea_level_rise: f32, // Meters of sea level rise
+    pub precipitation_changes: f32, // Percentage change in precipitation
+    pub extreme_weather_frequency: f32, // Multiplier for extreme weather
+    pub carbon_concentration: f32, // Atmospheric CO2 concentration
+    pub climate_zones_shift: f32, // How much climate zones have shifted
+    pub impact_on_ecosystems: f32, // How much ecosystems are affected
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnvironmentalImpact {
+    pub deforestation_rate: f32, // Rate of forest loss
+    pub soil_degradation: f32, // Soil quality degradation
+    pub water_pollution: f32, // Water quality degradation
+    pub air_pollution: f32, // Air quality degradation
+    pub habitat_fragmentation: f32, // How much habitats are fragmented
+    pub species_extinction_rate: f32, // Rate of species loss
+    pub resource_depletion_rate: f32, // Rate of resource depletion
+    pub impact_zones: Vec<ImpactZone>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImpactZone {
+    pub position: Vec2Def,
+    pub radius: f32,
+    pub impact_type: ImpactType,
+    pub intensity: f32, // 0.0 to 1.0
+    pub duration: u64,
+    pub affected_species: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ImpactType {
+    Deforestation,
+    Mining,
+    Agriculture,
+    Urbanization,
+    Pollution,
+    ClimateChange,
+    Overfishing,
+    Hunting,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Pollution {
+    pub air_pollution: f32, // 0.0 (clean) to 1.0 (toxic)
+    pub water_pollution: f32, // 0.0 (clean) to 1.0 (toxic)
+    pub soil_pollution: f32, // 0.0 (clean) to 1.0 (toxic)
+    pub noise_pollution: f32, // 0.0 (quiet) to 1.0 (noisy)
+    pub light_pollution: f32, // 0.0 (dark) to 1.0 (bright)
+    pub pollution_sources: Vec<PollutionSource>,
+    pub pollution_effects: Vec<PollutionEffect>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PollutionSource {
+    pub source_type: PollutionSourceType,
+    pub position: Vec2Def,
+    pub intensity: f32, // 0.0 to 1.0
+    pub radius: f32,
+    pub duration: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PollutionSourceType {
+    Industrial,
+    Agricultural,
+    Urban,
+    Mining,
+    Transportation,
+    Waste,
+    Natural,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PollutionEffect {
+    pub effect_type: PollutionEffectType,
+    pub severity: f32, // 0.0 to 1.0
+    pub affected_area: Vec2Def,
+    pub radius: f32,
+    pub duration: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PollutionEffectType {
+    HealthImpact,
+    EcosystemDamage,
+    ResourceDegradation,
+    ClimateChange,
+    BiodiversityLoss,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Biodiversity {
+    pub species_count: usize,
+    pub species_diversity_index: f32, // Shannon diversity index
+    pub endangered_species: Vec<EndangeredSpecies>,
+    pub invasive_species: Vec<InvasiveSpecies>,
+    pub keystone_species: Vec<KeystoneSpecies>,
+    pub biodiversity_hotspots: Vec<BiodiversityHotspot>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EndangeredSpecies {
+    pub species_name: String,
+    pub population: usize,
+    pub critical_threshold: usize,
+    pub habitat_requirements: Vec<HabitatRequirement>,
+    pub conservation_efforts: Vec<ConservationEffort>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HabitatRequirement {
+    pub biome_type: super::terrain::BiomeType,
+    pub temperature_range: (f32, f32),
+    pub moisture_range: (f32, f32),
+    pub elevation_range: (f32, f32),
+    pub food_sources: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConservationEffort {
+    pub effort_type: ConservationType,
+    pub effectiveness: f32, // 0.0 to 1.0
+    pub cost: f32,
+    pub duration: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ConservationType {
+    HabitatProtection,
+    CaptiveBreeding,
+    Reintroduction,
+    AntiPoaching,
+    Education,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InvasiveSpecies {
+    pub species_name: String,
+    pub population: usize,
+    pub growth_rate: f32,
+    pub impact_on_native_species: f32, // 0.0 to 1.0
+    pub control_efforts: Vec<ControlEffort>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ControlEffort {
+    pub control_type: ControlType,
+    pub effectiveness: f32, // 0.0 to 1.0
+    pub cost: f32,
+    pub duration: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ControlType {
+    PhysicalRemoval,
+    ChemicalControl,
+    BiologicalControl,
+    HabitatModification,
+    Prevention,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KeystoneSpecies {
+    pub species_name: String,
+    pub population: usize,
+    pub ecosystem_importance: f32, // 0.0 to 1.0
+    pub functions: Vec<EcosystemFunction>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EcosystemFunction {
+    pub function_type: FunctionType,
+    pub importance: f32, // 0.0 to 1.0
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum FunctionType {
+    Pollination,
+    SeedDispersal,
+    Predation,
+    Decomposition,
+    NutrientCycling,
+    HabitatCreation,
+    ClimateRegulation,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BiodiversityHotspot {
+    pub position: Vec2Def,
+    pub radius: f32,
+    pub species_richness: usize,
+    pub uniqueness: f32, // 0.0 to 1.0
+    pub threat_level: f32, // 0.0 to 1.0
+    pub conservation_priority: f32, // 0.0 to 1.0
+}
+
 impl World {
     pub fn new(config: &WorldConfig) -> Result<Self> {
         Ok(Self {
@@ -117,23 +375,347 @@ impl World {
             events: Vec::new(),
             buildings: Vec::new(),
             structures: Vec::new(),
+            // Enhanced environmental systems
+            ecosystem: Ecosystem::default(),
+            climate_change: ClimateChange::default(),
+            environmental_impact: EnvironmentalImpact::default(),
+            pollution: Pollution::default(),
+            biodiversity: Biodiversity::default(),
         })
     }
     
     pub fn update_environment(&mut self, tick: u64) -> Result<()> {
-        debug!("Updating world environment at tick {}", tick);
-        
-        // Update time
-        self.time.update(tick);
-        
         // Update weather
-        self.weather.update(tick);
+        self.update_weather(tick)?;
         
-        // Update terrain effects
+        // Update environmental systems
+        self.update_ecosystem(tick)?;
+        self.update_climate_change(tick)?;
+        self.update_environmental_impact(tick)?;
+        self.update_pollution(tick)?;
+        self.update_biodiversity(tick)?;
+        
+        // Update terrain effects based on weather and environmental changes
         self.terrain.update_effects(&self.weather, tick)?;
         
         // Update resource regeneration
         self.update_resource_regeneration(tick)?;
+        
+        Ok(())
+    }
+
+    pub fn update_ecosystem(&mut self, tick: u64) -> Result<()> {
+        let mut rng = rand::thread_rng();
+        
+        // Calculate ecosystem health based on various factors
+        let pollution_impact = (self.pollution.air_pollution + self.pollution.water_pollution + self.pollution.soil_pollution) / 3.0;
+        let human_impact = self.humanoids.len() as f32 / 1000.0; // Normalize to 0-1 scale
+        let climate_impact = self.climate_change.impact_on_ecosystems;
+        
+        // Update ecosystem health
+        let health_degradation = pollution_impact * 0.3 + human_impact * 0.2 + climate_impact * 0.5;
+        self.ecosystem.health = (self.ecosystem.health - health_degradation * 0.01).max(0.0);
+        
+        // Natural regeneration
+        if self.ecosystem.health < 1.0 {
+            self.ecosystem.health = (self.ecosystem.health + self.ecosystem.regeneration_rate * 0.01).min(1.0);
+        }
+        
+        // Update stability based on stress factors
+        let total_stress = self.ecosystem.stress_factors.iter().map(|s| s.intensity).sum::<f32>();
+        self.ecosystem.stability = (1.0 - total_stress * 0.1).max(0.0);
+        
+        // Process stress factors
+        self.ecosystem.stress_factors.retain_mut(|stress| {
+            stress.duration += 1;
+            stress.intensity *= 0.99; // Gradual reduction
+            stress.intensity > 0.01 // Remove if too weak
+        });
+        
+        // Process recovery mechanisms
+        self.ecosystem.recovery_mechanisms.retain_mut(|recovery| {
+            recovery.duration += 1;
+            if recovery.duration > 100 { // Recovery takes time
+                self.ecosystem.health = (self.ecosystem.health + recovery.effectiveness * 0.01).min(1.0);
+                false // Remove completed recovery
+            } else {
+                true
+            }
+        });
+        
+        // Generate new stress factors occasionally
+        if rng.gen::<f32>() < 0.001 { // 0.1% chance per tick
+            self.generate_ecosystem_stress(tick)?;
+        }
+        
+        Ok(())
+    }
+
+    pub fn update_climate_change(&mut self, tick: u64) -> Result<()> {
+        let mut rng = rand::thread_rng();
+        
+        // Calculate human impact on climate
+        let human_population = self.humanoids.len() as f32;
+        let technology_level = self.get_technological_progress().average_level;
+        
+        // Increase carbon concentration based on population and technology
+        let carbon_increase = human_population * 0.0001 + technology_level * 0.001;
+        self.climate_change.carbon_concentration += carbon_increase;
+        
+        // Calculate temperature change based on carbon concentration
+        let base_temp_change = (self.climate_change.carbon_concentration - 400.0) * 0.0001;
+        self.climate_change.global_temperature_change += base_temp_change;
+        
+        // Update other climate factors
+        self.climate_change.precipitation_changes = self.climate_change.global_temperature_change * 0.1;
+        self.climate_change.extreme_weather_frequency = 1.0 + self.climate_change.global_temperature_change * 0.5;
+        self.climate_change.sea_level_rise = self.climate_change.global_temperature_change * 0.1;
+        
+        // Calculate impact on ecosystems
+        self.climate_change.impact_on_ecosystems = self.climate_change.global_temperature_change * 0.2;
+        
+        // Update weather based on climate change
+        self.weather.temperature += self.climate_change.global_temperature_change * 0.001;
+        
+        Ok(())
+    }
+
+    pub fn update_environmental_impact(&mut self, tick: u64) -> Result<()> {
+        let mut rng = rand::thread_rng();
+        
+        // Calculate impact based on human activities
+        let population = self.humanoids.len() as f32;
+        let technology_level = self.get_technological_progress().average_level;
+        
+        // Update various impact rates
+        self.environmental_impact.deforestation_rate = population * 0.001;
+        self.environmental_impact.soil_degradation = population * 0.0005;
+        self.environmental_impact.water_pollution = population * 0.002;
+        self.environmental_impact.air_pollution = population * 0.0015;
+        self.environmental_impact.habitat_fragmentation = population * 0.0008;
+        self.environmental_impact.species_extinction_rate = population * 0.0001;
+        self.environmental_impact.resource_depletion_rate = population * 0.003;
+        
+        // Collect humanoid positions first to avoid borrowing issues
+        let humanoid_positions: Vec<Vec2Def> = self.humanoids.iter().map(|h| h.position).collect();
+        
+        // Generate impact zones based on humanoid positions
+        for position in humanoid_positions {
+            if rng.gen::<f32>() < 0.01 { // 1% chance per humanoid per tick
+                self.generate_impact_zone(position, tick)?;
+            }
+        }
+        
+        // Update existing impact zones
+        self.environmental_impact.impact_zones.retain_mut(|zone| {
+            zone.duration += 1;
+            zone.intensity *= 0.99; // Gradual recovery
+            zone.intensity > 0.01 // Remove if too weak
+        });
+        
+        Ok(())
+    }
+
+    pub fn update_pollution(&mut self, tick: u64) -> Result<()> {
+        let mut rng = rand::thread_rng();
+        
+        // Calculate pollution based on human activities
+        let population = self.humanoids.len() as f32;
+        let technology_level = self.get_technological_progress().average_level;
+        
+        // Update pollution levels
+        self.pollution.air_pollution = (self.pollution.air_pollution + population * 0.001).min(1.0);
+        self.pollution.water_pollution = (self.pollution.water_pollution + population * 0.0005).min(1.0);
+        self.pollution.soil_pollution = (self.pollution.soil_pollution + population * 0.0003).min(1.0);
+        self.pollution.noise_pollution = (self.pollution.noise_pollution + population * 0.002).min(1.0);
+        self.pollution.light_pollution = (self.pollution.light_pollution + population * 0.001).min(1.0);
+        
+        // Natural pollution reduction
+        self.pollution.air_pollution *= 0.999;
+        self.pollution.water_pollution *= 0.9995;
+        self.pollution.soil_pollution *= 0.9997;
+        self.pollution.noise_pollution *= 0.998;
+        self.pollution.light_pollution *= 0.999;
+        
+        // Collect humanoid positions first to avoid borrowing issues
+        let humanoid_positions: Vec<Vec2Def> = self.humanoids.iter().map(|h| h.position).collect();
+        
+        // Generate pollution sources
+        for position in humanoid_positions {
+            if rng.gen::<f32>() < 0.005 { // 0.5% chance per humanoid per tick
+                self.generate_pollution_source(position, tick)?;
+            }
+        }
+        
+        // Update pollution sources and effects
+        self.pollution.pollution_sources.retain_mut(|source| {
+            source.duration += 1;
+            source.intensity *= 0.99;
+            source.intensity > 0.01
+        });
+        
+        self.pollution.pollution_effects.retain_mut(|effect| {
+            effect.duration += 1;
+            effect.severity *= 0.99;
+            effect.severity > 0.01
+        });
+        
+        Ok(())
+    }
+
+    pub fn update_biodiversity(&mut self, tick: u64) -> Result<()> {
+        let mut rng = rand::thread_rng();
+        
+        // Calculate biodiversity based on ecosystem health and human impact
+        let ecosystem_health = self.ecosystem.health;
+        let human_impact = self.humanoids.len() as f32 / 1000.0;
+        
+        // Update species count and diversity
+        let base_species_count = 100;
+        let impact_factor = (1.0 - human_impact * 0.5).max(0.1);
+        self.biodiversity.species_count = (base_species_count as f32 * impact_factor * ecosystem_health) as usize;
+        
+        // Calculate Shannon diversity index
+        self.biodiversity.species_diversity_index = ecosystem_health * (1.0 - human_impact * 0.3);
+        
+        // Update endangered species
+        for species in &mut self.biodiversity.endangered_species {
+            if rng.gen::<f32>() < 0.001 { // 0.1% chance of population change
+                let change = rng.gen_range(-2..3);
+                species.population = (species.population as i32 + change).max(0) as usize;
+            }
+        }
+        
+        // Update invasive species
+        for species in &mut self.biodiversity.invasive_species {
+            species.population = (species.population as f32 * species.growth_rate) as usize;
+            species.impact_on_native_species = (species.impact_on_native_species + 0.001).min(1.0);
+        }
+        
+        // Update keystone species
+        for species in &mut self.biodiversity.keystone_species {
+            if rng.gen::<f32>() < 0.0005 { // 0.05% chance of population change
+                let change = rng.gen_range(-1..2);
+                species.population = (species.population as i32 + change).max(0) as usize;
+            }
+        }
+        
+        // Generate new biodiversity hotspots occasionally
+        if rng.gen::<f32>() < 0.0001 { // 0.01% chance per tick
+            self.generate_biodiversity_hotspot(tick)?;
+        }
+        
+        Ok(())
+    }
+
+    fn generate_ecosystem_stress(&mut self, tick: u64) -> Result<()> {
+        let mut rng = rand::thread_rng();
+        
+        let stress_types = vec![
+            StressType::Overharvesting,
+            StressType::Pollution,
+            StressType::ClimateChange,
+            StressType::HabitatDestruction,
+            StressType::InvasiveSpecies,
+            StressType::Disease,
+            StressType::NaturalDisaster,
+        ];
+        
+        let stress_type = stress_types.choose(&mut rng).unwrap();
+        let position = Vec2Def::new(
+            rng.gen_range(0.0..self.config.world_size.0 as f32),
+            rng.gen_range(0.0..self.config.world_size.1 as f32),
+        );
+        
+        let stress = EcosystemStress {
+            stress_type: stress_type.clone(),
+            intensity: rng.gen_range(0.1..0.5),
+            duration: 0,
+            location: position,
+            impact_radius: rng.gen_range(10.0..50.0),
+        };
+        
+        self.ecosystem.stress_factors.push(stress);
+        
+        Ok(())
+    }
+
+    fn generate_impact_zone(&mut self, position: Vec2Def, tick: u64) -> Result<()> {
+        let mut rng = rand::thread_rng();
+        
+        let impact_types = vec![
+            ImpactType::Deforestation,
+            ImpactType::Mining,
+            ImpactType::Agriculture,
+            ImpactType::Urbanization,
+            ImpactType::Pollution,
+            ImpactType::ClimateChange,
+            ImpactType::Overfishing,
+            ImpactType::Hunting,
+        ];
+        
+        let impact_type = impact_types.choose(&mut rng).unwrap();
+        
+        let zone = ImpactZone {
+            position,
+            radius: rng.gen_range(5.0..20.0),
+            impact_type: impact_type.clone(),
+            intensity: rng.gen_range(0.1..0.8),
+            duration: 0,
+            affected_species: vec!["local wildlife".to_string()],
+        };
+        
+        self.environmental_impact.impact_zones.push(zone);
+        
+        Ok(())
+    }
+
+    fn generate_pollution_source(&mut self, position: Vec2Def, tick: u64) -> Result<()> {
+        let mut rng = rand::thread_rng();
+        
+        let source_types = vec![
+            PollutionSourceType::Industrial,
+            PollutionSourceType::Agricultural,
+            PollutionSourceType::Urban,
+            PollutionSourceType::Mining,
+            PollutionSourceType::Transportation,
+            PollutionSourceType::Waste,
+            PollutionSourceType::Natural,
+        ];
+        
+        let source_type = source_types.choose(&mut rng).unwrap();
+        
+        let source = PollutionSource {
+            source_type: source_type.clone(),
+            position,
+            intensity: rng.gen_range(0.1..0.6),
+            radius: rng.gen_range(5.0..15.0),
+            duration: 0,
+        };
+        
+        self.pollution.pollution_sources.push(source);
+        
+        Ok(())
+    }
+
+    fn generate_biodiversity_hotspot(&mut self, tick: u64) -> Result<()> {
+        let mut rng = rand::thread_rng();
+        
+        let position = Vec2Def::new(
+            rng.gen_range(0.0..self.config.world_size.0 as f32),
+            rng.gen_range(0.0..self.config.world_size.1 as f32),
+        );
+        
+        let hotspot = BiodiversityHotspot {
+            position,
+            radius: rng.gen_range(20.0..100.0),
+            species_richness: rng.gen_range(10..50),
+            uniqueness: rng.gen_range(0.3..0.9),
+            threat_level: rng.gen_range(0.1..0.7),
+            conservation_priority: rng.gen_range(0.5..1.0),
+        };
+        
+        self.biodiversity.biodiversity_hotspots.push(hotspot);
         
         Ok(())
     }
@@ -194,41 +776,188 @@ impl World {
     
     pub fn check_environmental_events(&self, tick: u64) -> Result<Vec<Event>> {
         let mut events = Vec::new();
+        let mut rng = rand::thread_rng();
         
-        // Check for extreme weather events
-        if self.weather.temperature > 40.0 {
-            events.push(Event::new(
-                "heat_wave",
-                "A severe heat wave affects the region",
-                vec![],
-                None,
-                0.7,
-                tick,
-            ));
+        // Ecosystem events
+        if rng.gen::<f32>() < 0.001 { // 0.1% chance per tick
+            events.extend(self.generate_ecosystem_events(tick)?);
         }
         
-        if self.weather.temperature < -10.0 {
-            events.push(Event::new(
-                "cold_snap",
-                "A cold snap freezes the region",
-                vec![],
-                None,
-                0.7,
-                tick,
-            ));
+        // Climate change events
+        if rng.gen::<f32>() < 0.0005 { // 0.05% chance per tick
+            events.extend(self.generate_climate_change_events(tick)?);
         }
         
-        if self.weather.precipitation > 0.8 {
-            events.push(Event::new(
-                "heavy_rain",
-                "Heavy rainfall causes flooding",
-                vec![],
-                None,
-                0.6,
-                tick,
-            ));
+        // Pollution events
+        if rng.gen::<f32>() < 0.002 { // 0.2% chance per tick
+            events.extend(self.generate_pollution_events(tick)?);
         }
         
+        // Biodiversity events
+        if rng.gen::<f32>() < 0.0003 { // 0.03% chance per tick
+            events.extend(self.generate_biodiversity_events(tick)?);
+        }
+        
+        // Environmental disaster events
+        if rng.gen::<f32>() < 0.0001 { // 0.01% chance per tick
+            events.extend(self.generate_environmental_disaster_events(tick)?);
+        }
+        
+        Ok(events)
+    }
+
+    fn generate_ecosystem_events(&self, tick: u64) -> Result<Vec<Event>> {
+        let mut events = Vec::new();
+        let mut rng = rand::thread_rng();
+        
+        let event_types = vec![
+            "ecosystem_recovery",
+            "ecosystem_degradation", 
+            "species_boom",
+            "species_collapse",
+            "habitat_expansion",
+            "habitat_contraction",
+            "food_web_disruption",
+            "food_web_stabilization",
+        ];
+        
+        let event_type = event_types.choose(&mut rng).unwrap();
+        let intensity = rng.gen_range(0.1..0.9);
+        
+        let event = Event::new(
+            event_type,
+            &format!("Ecosystem event: {} with intensity {:.2}", event_type, intensity),
+            vec![],
+            Some((rng.gen_range(0.0..self.config.world_size.0 as f64), rng.gen_range(0.0..self.config.world_size.1 as f64))),
+            intensity,
+            tick,
+        );
+        
+        events.push(event);
+        Ok(events)
+    }
+
+    fn generate_climate_change_events(&self, tick: u64) -> Result<Vec<Event>> {
+        let mut events = Vec::new();
+        let mut rng = rand::thread_rng();
+        
+        let event_types = vec![
+            "temperature_spike",
+            "temperature_drop",
+            "precipitation_change",
+            "extreme_weather",
+            "sea_level_rise",
+            "climate_zone_shift",
+            "carbon_spike",
+            "carbon_reduction",
+        ];
+        
+        let event_type = event_types.choose(&mut rng).unwrap();
+        let intensity = rng.gen_range(0.2..1.0);
+        
+        let event = Event::new(
+            event_type,
+            &format!("Climate change event: {} with intensity {:.2}", event_type, intensity),
+            vec![],
+            Some((rng.gen_range(0.0..self.config.world_size.0 as f64), rng.gen_range(0.0..self.config.world_size.1 as f64))),
+            intensity,
+            tick,
+        );
+        
+        events.push(event);
+        Ok(events)
+    }
+
+    fn generate_pollution_events(&self, tick: u64) -> Result<Vec<Event>> {
+        let mut events = Vec::new();
+        let mut rng = rand::thread_rng();
+        
+        let event_types = vec![
+            "air_pollution_spike",
+            "water_contamination",
+            "soil_degradation",
+            "noise_pollution_increase",
+            "light_pollution_spread",
+            "pollution_cleanup",
+            "industrial_accident",
+            "natural_pollution_reduction",
+        ];
+        
+        let event_type = event_types.choose(&mut rng).unwrap();
+        let intensity = rng.gen_range(0.1..0.8);
+        
+        let event = Event::new(
+            event_type,
+            &format!("Pollution event: {} with intensity {:.2}", event_type, intensity),
+            vec![],
+            Some((rng.gen_range(0.0..self.config.world_size.0 as f64), rng.gen_range(0.0..self.config.world_size.1 as f64))),
+            intensity,
+            tick,
+        );
+        
+        events.push(event);
+        Ok(events)
+    }
+
+    fn generate_biodiversity_events(&self, tick: u64) -> Result<Vec<Event>> {
+        let mut events = Vec::new();
+        let mut rng = rand::thread_rng();
+        
+        let event_types = vec![
+            "species_discovery",
+            "species_extinction",
+            "invasive_species_spread",
+            "keystone_species_recovery",
+            "biodiversity_hotspot_formation",
+            "conservation_success",
+            "habitat_fragmentation",
+            "species_migration",
+        ];
+        
+        let event_type = event_types.choose(&mut rng).unwrap();
+        let intensity = rng.gen_range(0.1..0.7);
+        
+        let event = Event::new(
+            event_type,
+            &format!("Biodiversity event: {} with intensity {:.2}", event_type, intensity),
+            vec![],
+            Some((rng.gen_range(0.0..self.config.world_size.0 as f64), rng.gen_range(0.0..self.config.world_size.1 as f64))),
+            intensity,
+            tick,
+        );
+        
+        events.push(event);
+        Ok(events)
+    }
+
+    fn generate_environmental_disaster_events(&self, tick: u64) -> Result<Vec<Event>> {
+        let mut events = Vec::new();
+        let mut rng = rand::thread_rng();
+        
+        let event_types = vec![
+            "natural_disaster",
+            "environmental_collapse",
+            "mass_extinction",
+            "ecosystem_collapse",
+            "climate_catastrophe",
+            "pollution_crisis",
+            "habitat_destruction",
+            "environmental_recovery",
+        ];
+        
+        let event_type = event_types.choose(&mut rng).unwrap();
+        let intensity = rng.gen_range(0.5..1.0);
+        
+        let event = Event::new(
+            event_type,
+            &format!("Environmental disaster: {} with intensity {:.2}", event_type, intensity),
+            vec![],
+            Some((rng.gen_range(0.0..self.config.world_size.0 as f64), rng.gen_range(0.0..self.config.world_size.1 as f64))),
+            intensity,
+            tick,
+        );
+        
+        events.push(event);
         Ok(events)
     }
     
@@ -954,6 +1683,77 @@ pub struct TechProgress {
     pub average_level: f32,
     pub max_level: f32,
     pub discoveries: usize,
+}
+
+impl Default for Ecosystem {
+    fn default() -> Self {
+        Self {
+            health: 1.0,
+            stability: 1.0,
+            species_diversity: 1.0,
+            food_web_complexity: 1.0,
+            carrying_capacity: 1000.0,
+            regeneration_rate: 0.1,
+            stress_factors: Vec::new(),
+            recovery_mechanisms: Vec::new(),
+        }
+    }
+}
+
+impl Default for ClimateChange {
+    fn default() -> Self {
+        Self {
+            global_temperature_change: 0.0,
+            sea_level_rise: 0.0,
+            precipitation_changes: 0.0,
+            extreme_weather_frequency: 1.0,
+            carbon_concentration: 400.0, // ppm
+            climate_zones_shift: 0.0,
+            impact_on_ecosystems: 0.0,
+        }
+    }
+}
+
+impl Default for EnvironmentalImpact {
+    fn default() -> Self {
+        Self {
+            deforestation_rate: 0.0,
+            soil_degradation: 0.0,
+            water_pollution: 0.0,
+            air_pollution: 0.0,
+            habitat_fragmentation: 0.0,
+            species_extinction_rate: 0.0,
+            resource_depletion_rate: 0.0,
+            impact_zones: Vec::new(),
+        }
+    }
+}
+
+impl Default for Pollution {
+    fn default() -> Self {
+        Self {
+            air_pollution: 0.0,
+            water_pollution: 0.0,
+            soil_pollution: 0.0,
+            noise_pollution: 0.0,
+            light_pollution: 0.0,
+            pollution_sources: Vec::new(),
+            pollution_effects: Vec::new(),
+        }
+    }
+}
+
+impl Default for Biodiversity {
+    fn default() -> Self {
+        Self {
+            species_count: 0,
+            species_diversity_index: 0.0,
+            endangered_species: Vec::new(),
+            invasive_species: Vec::new(),
+            keystone_species: Vec::new(),
+            biodiversity_hotspots: Vec::new(),
+        }
+    }
 }
 
 impl Weather {

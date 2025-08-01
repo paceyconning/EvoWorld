@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 use crate::config::Config;
 use crate::database;
+use crate::analytics::AnalyticsEngine;
 use super::world::World;
 use super::events::EventLog;
 use super::humanoid::Humanoid;
@@ -60,6 +61,7 @@ pub struct SimulationEngine {
     performance_history: Vec<PerformanceMetrics>,
     pub last_metrics: PerformanceMetrics,
     tick_count: u64,
+    analytics_engine: Option<AnalyticsEngine>,
 }
 
 impl SimulationEngine {
@@ -72,6 +74,13 @@ impl SimulationEngine {
         let terrain_generator = TerrainGenerator::new(config.world.terrain_seed);
         let resource_manager = ResourceManager::new(&config.world);
         
+        // Initialize analytics engine if database is available
+        let analytics_engine = if let Some(ref db_pool) = db_pool {
+            Some(AnalyticsEngine::new(db_pool.clone()))
+        } else {
+            None
+        };
+        
         Ok(Self {
             config,
             world,
@@ -83,6 +92,7 @@ impl SimulationEngine {
             performance_history: Vec::new(),
             last_metrics: PerformanceMetrics::default(),
             tick_count: 0,
+            analytics_engine,
         })
     }
     
@@ -119,12 +129,27 @@ impl SimulationEngine {
         let weather_duration = weather_start.elapsed();
         debug!("[TICK {}] Weather updated in {:?}", tick, weather_duration);
 
+        // Update analytics
+        let analytics_start = Instant::now();
+        if let Some(ref mut analytics_engine) = self.analytics_engine {
+            let world = self.world.read().await;
+            analytics_engine.update_real_time_metrics(&world, tick).await?;
+            analytics_engine.update_historical_data(&world, tick).await?;
+            analytics_engine.generate_predictions(&world, tick).await?;
+            
+            // Save analytics to database
+            if let Some(_) = &self.db_pool {
+                analytics_engine.save_analytics_to_database().await?;
+            }
+        }
+        let analytics_duration = analytics_start.elapsed();
+        
         let total_duration = start.elapsed();
         self.last_metrics.world_update_time = total_duration;
         self.last_metrics.resource_update_time = res_duration;
         self.last_metrics.resources_updated = resources_updated;
         
-        trace!("[TICK {}] World update completed in {:?}", tick, total_duration);
+        trace!("[TICK {}] World update completed in {:?} (analytics: {:?})", tick, total_duration, analytics_duration);
         Ok(())
     }
     
@@ -494,6 +519,22 @@ impl SimulationEngine {
         avg_metrics.resources_updated /= count as usize;
         
         Some(avg_metrics)
+    }
+    
+    pub fn get_analytics_summary(&self) -> Option<String> {
+        self.analytics_engine.as_ref().map(|ae| ae.get_analytics_summary())
+    }
+    
+    pub fn get_real_time_metrics(&self) -> Option<&crate::analytics::RealTimeMetrics> {
+        self.analytics_engine.as_ref().map(|ae| &ae.real_time_metrics)
+    }
+    
+    pub fn get_historical_data(&self) -> Option<&crate::analytics::HistoricalData> {
+        self.analytics_engine.as_ref().map(|ae| &ae.historical_data)
+    }
+    
+    pub fn get_prediction_models(&self) -> Option<&crate::analytics::PredictionModels> {
+        self.analytics_engine.as_ref().map(|ae| &ae.prediction_models)
     }
 }
 
