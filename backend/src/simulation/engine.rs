@@ -102,6 +102,12 @@ impl SimulationEngine {
         
         trace!("[TICK {}] Starting world update", tick);
         
+        // Update world time first
+        {
+            let mut world = self.world.write().await;
+            world.time.update(tick);
+        }
+        
         // Update environmental conditions
         let env_start = Instant::now();
         {

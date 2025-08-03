@@ -1675,7 +1675,7 @@ impl AnalyticsEngine {
 
     pub async fn save_analytics_to_database(&self) -> Result<()> {
         // Save real-time metrics to database
-        let metrics_json = serde_json::to_string(&self.real_time_metrics)?;
+        let metrics_json = serde_json::to_value(&self.real_time_metrics)?;
         
         sqlx::query!(
             "INSERT INTO analytics_metrics (tick, metrics_data) VALUES ($1, $2)",
@@ -1699,7 +1699,7 @@ impl AnalyticsEngine {
         .await?;
         
         if let Some(row) = row {
-            self.real_time_metrics = serde_json::from_str(&row.metrics_data)?;
+            self.real_time_metrics = serde_json::from_value(row.metrics_data)?;
             info!("Loaded analytics metrics for tick {}", tick);
         }
         

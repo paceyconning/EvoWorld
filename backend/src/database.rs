@@ -100,10 +100,19 @@ async fn init_schema(pool: &PgPool) -> Result<()> {
             UNIQUE(x, y)
         );
         
+        CREATE TABLE IF NOT EXISTS analytics_metrics (
+            id SERIAL PRIMARY KEY,
+            tick BIGINT NOT NULL,
+            metrics_data JSONB NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE(tick)
+        );
+        
         CREATE INDEX IF NOT EXISTS idx_humanoids_position ON humanoids(position_x, position_y);
         CREATE INDEX IF NOT EXISTS idx_events_tick ON events(tick);
         CREATE INDEX IF NOT EXISTS idx_resources_position ON resources(position_x, position_y);
         CREATE INDEX IF NOT EXISTS idx_terrain_position ON terrain(x, y);
+        CREATE INDEX IF NOT EXISTS idx_analytics_metrics_tick ON analytics_metrics(tick);
         "#
     )
     .execute(pool)

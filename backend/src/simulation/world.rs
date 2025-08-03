@@ -385,6 +385,9 @@ impl World {
     }
     
     pub fn update_environment(&mut self, tick: u64) -> Result<()> {
+        // Update world time
+        self.time.update(tick);
+        
         // Update weather
         self.update_weather(tick)?;
         
