@@ -107,38 +107,34 @@ EvoWorld/
 └── README.md               # This file
 ```
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 - **Rust 1.88+** - [Install Rust](https://www.rust-lang.org/tools/install)
-- **Godot 4.x** - [Download Godot](https://godotengine.org/download)
-- **PostgreSQL** - [Install PostgreSQL](https://www.postgresql.org/download/)
+- **Godot 4.4+** - [Download Godot](https://godotengine.org/download)
+- **PostgreSQL** (optional) - [Install PostgreSQL](https://www.postgresql.org/download/)
 
-### Backend Setup
+### 1. Start the Backend
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/evoworld.git
-cd evoworld
-
-# Setup backend
-cd backend
-cargo build  # ✅ Compiles successfully - all errors fixed!
-cargo test   # ✅ 33 tests passing (100% success rate!)
-
-# Configure database
-cp env.example .env
-# Edit .env with your database settings
-
-# Run the simulation
-cargo run -- --websocket
+./start_simulation.sh
 ```
 
-### Frontend Setup
+### 2. Open the Frontend
+1. Open Godot 4.4+
+2. Open the `frontend` folder as a project
+3. Press F5 to run
+
+### 3. Watch the Simulation
+- The frontend will automatically connect to the backend
+- Watch humanoids evolve and interact autonomously
+- Use UI controls to adjust speed and view modes
+
+### Check Status
 ```bash
-# Open Godot 4
-# Import the frontend/ directory as a project
-# Run the main scene (Main.tscn)
+./check_status.sh
 ```
+
+For detailed instructions, see [QUICK_START.md](QUICK_START.md).
 
 ## Project Status
 

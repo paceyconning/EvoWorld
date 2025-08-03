@@ -12,7 +12,7 @@ config_version=5
 
 config/name="EvoWorld"
 config/description="Autonomous Civilization Evolution Simulation"
-run/main_scene="res://scenes/WebSocketTest.tscn"
+run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.4")
 config/icon="res://icon.svg"
 
