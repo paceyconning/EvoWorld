@@ -386,8 +386,21 @@ func update_world(world_data: Dictionary):
 	# Update environment based on weather/ecosystem
 	update_environment_effects()
 	
+	# Update time display
+	update_time_display()
+	
 	print("✅ World display update complete")
 	print("📊 Entity counts: ", get_entity_count())
+
+func update_time_display():
+	"""Update time display from world data"""
+	if not world_data.has("time"):
+		return
+	
+	var time_data = world_data.time
+	var main_controller = get_parent()
+	if main_controller and main_controller.has_method("update_time_display"):
+		main_controller.update_time_display(time_data)
 
 func update_terrain_visualization():
 	if not terrain_mesh or not world_data.has("terrain"):
@@ -456,20 +469,23 @@ func update_humanoids(humanoids_data: Array):
 	for i in range(humanoids_data.size()):
 		var humanoid_data = humanoids_data[i]
 		var humanoid = humanoid_scene.instantiate()
-		humanoid.name = "Humanoid_" + str(humanoid_data.get("id", i))
 		
-		# Set position
+		# Use UUID as name if available, otherwise use index
+		var humanoid_id = humanoid_data.get("id", str(i))
+		humanoid.name = "Humanoid_" + str(humanoid_id)
+		
+		# Set position from Vec2Def format
 		if humanoid_data.has("position"):
 			var pos = humanoid_data.position
 			humanoid.position = Vector3(pos.x, 0, pos.y)
-			print("📍 Humanoid ", i, " at position: ", humanoid.position)
+			print("📍 Humanoid ", humanoid_id, " at position: ", humanoid.position)
 		else:
 			# Place humanoids in a grid if no position data
 			var grid_size = 10
 			var x = (i % grid_size) * 5.0
 			var z = (i / grid_size) * 5.0
 			humanoid.position = Vector3(x, 0, z)
-			print("📍 Humanoid ", i, " placed at grid position: ", humanoid.position)
+			print("📍 Humanoid ", humanoid_id, " placed at grid position: ", humanoid.position)
 		
 		# Set properties
 		if humanoid.has_method("set_properties"):

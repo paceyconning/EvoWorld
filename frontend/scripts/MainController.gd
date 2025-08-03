@@ -26,8 +26,10 @@ func _ready():
 	# Initialize UI safely
 	initialize_ui()
 	
-	# Create test data for immediate visualization
-	create_test_world_data()
+	# Request initial world state from backend
+	if websocket_client and websocket_client.get_connection_status():
+		websocket_client.get_world_state()
+		print("📊 Requested initial world state from backend")
 	
 	print("✅ MainController initialization complete")
 
@@ -189,68 +191,7 @@ func set_view_mode(mode: String):
 				world_renderer.set_view_mode(world_renderer.ViewMode.CLOSE_UP)
 		print("🎮 View mode set to: ", mode)
 
-func create_test_world_data():
-	"""Create test world data for immediate visualization"""
-	print("🧪 Creating test world data...")
-	
-	var test_data = {
-		"humanoids": [],
-		"resources": [],
-		"buildings": [],
-		"tribes": [],
-		"time": {"tick": 0, "day": 1, "year": 1},
-		"weather": {"temperature": 20.0, "humidity": 0.6, "precipitation": 0.1},
-		"ecosystem": {"health": 0.8, "stability": 0.7, "species_diversity": 0.6}
-	}
-	
-	# Create test humanoids with varied properties
-	for i in range(15):
-		test_data.humanoids.append({
-			"id": i,
-			"name": "Humanoid_" + str(i),
-			"age": randi() % 60 + 20,
-			"health": randi() % 100 + 30,
-			"intelligence": randi() % 100 + 20,
-			"position": {"x": (i % 5) * 8.0 - 20.0, "y": (i / 5) * 8.0 - 20.0},
-			"tribe_id": i % 3  # Assign to different tribes
-		})
-	
-	# Create test resources with different types
-	var resource_types = ["wood", "stone", "iron", "copper", "food", "water", "herbs"]
-	for i in range(8):
-		test_data.resources.append({
-			"id": i,
-			"type": resource_types[i % resource_types.size()],
-			"quantity": randi() % 100 + 50,
-			"quality": randf() * 0.5 + 0.5,
-			"position": {"x": (i % 4) * 12.0 - 15.0, "y": (i / 4) * 12.0 - 15.0}
-		})
-	
-	# Create test buildings
-	var building_types = ["hut", "house", "workshop", "temple", "farm"]
-	for i in range(5):
-		test_data.buildings.append({
-			"id": i,
-			"type": building_types[i % building_types.size()],
-			"quality": randf() * 0.5 + 0.5,
-			"durability": randf() * 0.5 + 0.5,
-			"inhabitants": [i * 2, i * 2 + 1] if i < 3 else [],
-			"position": {"x": i * 15.0 - 30.0, "y": 0}
-		})
-	
-	# Create test tribes
-	for i in range(3):
-		test_data.tribes.append({
-			"id": i,
-			"name": "Tribe_" + str(i),
-			"member_count": 5,
-			"territory_center": {"x": i * 20.0 - 20.0, "y": 0}
-		})
-	
-	current_world_data = test_data
-	update_world_display()
-	update_statistics()
-	print("✅ Test world data created")
+
 
 func _on_world_state_received(data: Dictionary):
 	current_world_data = data
@@ -388,16 +329,20 @@ func update_statistics():
 		var total_age = 0
 		var total_health = 0
 		var total_intelligence = 0
+		var alive_count = 0
 		
 		for humanoid in humanoids:
-			total_age += humanoid.get("age", 0)
-			total_health += humanoid.get("health", 0)
-			total_intelligence += humanoid.get("intelligence", 0)
+			# Only count alive humanoids
+			if humanoid.get("is_alive", true):
+				alive_count += 1
+				total_age += humanoid.get("age", 0)
+				total_health += humanoid.get("health", 0)
+				total_intelligence += humanoid.get("intelligence", 0)
 		
-		if humanoids.size() > 0:
-			var avg_age = total_age / humanoids.size()
-			var avg_health = total_health / humanoids.size()
-			var avg_intelligence = total_intelligence / humanoids.size()
+		if alive_count > 0:
+			var avg_age = total_age / alive_count
+			var avg_health = total_health / alive_count
+			var avg_intelligence = total_intelligence / alive_count
 			
 			# Update detailed stats
 			var avg_age_label = find_child("AvgAgeLabel", true, false)
@@ -436,6 +381,34 @@ func update_statistics():
 				tech_label.text = "⚙️ Tech Level: " + str(int(tech_progress.get("average_level", 0) * 100)) + "%"
 	
 	print("📊 Statistics updated")
+
+func update_time_display(time_data: Dictionary):
+	"""Update time display with detailed time information"""
+	var time_label = find_child("TimeLabel", true, false)
+	if not time_label:
+		# Create time label if it doesn't exist
+		var stats_panel = find_child("StatsPanel", true, false)
+		if stats_panel:
+			var stats_container = find_child("StatsContainer", true, false)
+			if stats_container:
+				time_label = Label.new()
+				time_label.name = "TimeLabel"
+				stats_container.add_child(time_label)
+	
+	if time_label:
+		var tick = time_data.get("tick", 0)
+		var day = time_data.get("day", 1)
+		var year = time_data.get("year", 1)
+		var is_day = time_data.get("is_day", true)
+		var time_of_day = time_data.get("time_of_day", 0.5)
+		
+		var time_text = "⏰ Day " + str(day) + ", Year " + str(year)
+		if is_day:
+			time_text += " (Day)"
+		else:
+			time_text += " (Night)"
+		
+		time_label.text = time_text
 
 func _input(event):
 	if event.is_action_pressed("ui_cancel"):
