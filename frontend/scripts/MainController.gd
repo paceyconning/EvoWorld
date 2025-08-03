@@ -655,7 +655,6 @@ func add_entity_detail_panel():
 	"""Add entity detail panel for showing selected entity information"""
 	var entity_panel = Panel.new()
 	entity_panel.name = "EntityDetailPanel"
-	entity_panel.set_anchors_and_offsets_preset(Control.PRESET_RIGHT)
 	entity_panel.position = Vector2(-300, 10)
 	entity_panel.size = Vector2(290, 400)
 	entity_panel.visible = false

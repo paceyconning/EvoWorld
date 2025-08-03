@@ -56,10 +56,10 @@ func setup_lighting():
 	add_child(main_light)
 	
 	# Add point light for dramatic effect
-	var point_light = PointLight3D.new()
+	var point_light = OmniLight3D.new()
 	point_light.name = "PointLight"
 	point_light.light_energy = 0.5
-	point_light.light_color = Color.WARM_WHITE
+	point_light.light_color = Color.WHITE
 	point_light.position = Vector3(0, 10, 0)
 	add_child(point_light)
 	

@@ -136,7 +136,7 @@ func update_label():
 	label.text = label_text
 	
 	# Update label color based on health
-	if not health_color.is_empty():
+	if health_color != Color.TRANSPARENT:
 		label.modulate = health_color
 
 func set_properties(data: Dictionary):
@@ -162,15 +162,15 @@ func update_material():
 	var final_color = Color.WHITE
 	
 	# Blend age and health colors
-	if not age_color.is_empty() and not health_color.is_empty():
+	if age_color != Color.TRANSPARENT and health_color != Color.TRANSPARENT:
 		final_color = age_color.lerp(health_color, 0.5)
 	
 	# Add intelligence glow
-	if not intelligence_color.is_empty():
+	if intelligence_color != Color.TRANSPARENT:
 		material.emission = intelligence_color * 0.3
 	
 	# Add tribe color influence
-	if not tribe_color.is_empty():
+	if tribe_color != Color.TRANSPARENT:
 		final_color = final_color.lerp(tribe_color, 0.3)
 	
 	material.albedo_color = final_color
