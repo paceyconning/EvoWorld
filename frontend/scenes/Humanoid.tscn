@@ -1,10 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://humanoid_scene"]
+[gd_scene load_steps=3 format=3 uid="uid://yjyhh2ue7lw3"]
 
-[ext_resource type="Script" path="res://scripts/HumanoidController.gd" id="1_humanoid"]
+[ext_resource type="Script" uid="uid://coixvrswdr45x" path="res://scripts/HumanoidController.gd" id="1_humanoid"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_humanoid"]
-radius = 0.5
-height = 2.0
 
 [node name="Humanoid" type="CharacterBody3D"]
 script = ExtResource("1_humanoid")

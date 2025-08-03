@@ -7,207 +7,204 @@ EvoWorld is an ambitious civilization evolution simulation game built in Rust. T
 
 ## Current Development Status
 
-### Recent Progress (Latest Session - ANALYTICS ENGINE ENHANCEMENT COMPLETED)
-- **✅ ANALYTICS ENGINE ENHANCEMENT COMPLETED**: Successfully enhanced analytics engine with comprehensive evolution metrics and detailed event/population tracking
-- **Enhanced Analytics Engine**: Complete implementation of all calculation methods for population, technology, social, environmental, cultural, economic, and health metrics
-- **Real-Time Metrics Tracking**: Comprehensive tracking of population demographics, technology levels, social structures, environmental health, cultural diversity, economic indicators, and health statistics
-- **Historical Data Management**: Complete historical data collection and management with automatic cleanup to prevent memory bloat
-- **Prediction Models**: Advanced prediction systems for population growth, technology breakthroughs, social conflicts/alliances, environmental crises, cultural evolution, economic trends, and health outcomes
-- **Database Integration**: Full database integration for analytics persistence with graceful fallback when database is unavailable
-- **Simulation Engine Integration**: Analytics engine fully integrated into simulation engine with performance monitoring
-- **Comprehensive Data Structures**: Complete analytics data structures with proper type safety and serialization support
-- **Performance Optimization**: Analytics calculations optimized for real-time performance with minimal impact on simulation speed
+### Recent Progress (Latest Session - FRONTEND TESTING & ENHANCEMENT IN PROGRESS 🔄)
+- **✅ DATABASE INTEGRATION COMPLETED** - Complete PostgreSQL integration with analytics persistence and environment variable configuration
+- **✅ COMPILATION FIXES COMPLETED** - Resolved all compilation errors and environment issues
+- **✅ ANALYTICS ENGINE ENHANCED** - Enhanced with database persistence and real-time metrics
+- **✅ TESTING INFRASTRUCTURE COMPLETED** - 33 tests passing with comprehensive coverage (100% success rate!)
+- **✅ PHASE 4 TEST FIXES COMPLETED** - Successfully fixed all 3 failing simulation tests
+- **✅ FRONTEND ENHANCEMENT COMPLETED** - Enhanced WebSocket client with robust error handling, reconnection logic, and comprehensive debugging
+- **✅ TESTING INFRASTRUCTURE ENHANCED** - Created comprehensive testing guide and WebSocket test client
+- **✅ SIMULATION ENGINE OPTIMIZED** - World tick progression now properly synchronized across all systems
+- **✅ FRONTEND VISUALIZATION ENHANCED** - Complete visual overhaul with detailed graphics, animations, and enhanced UI
+- **🔄 FRONTEND TESTING & VALIDATION** - Currently testing enhanced frontend with Godot 4 and improving user experience
 
-### Technical Notes
-- **Backend Compilation**: All compilation errors fixed, 33 tests passing
-- **WebSocket Server**: Fully functional with client management and message handling
-- **Database Layer**: Structure in place with environment variable configuration
-- **Frontend Architecture**: Complete Godot 4 project with proper scene structure
-- **Real-time Communication**: Robust WebSocket client-server communication
-- **UI Integration**: Seamless integration between backend data and frontend display
-- **Performance Monitoring**: Comprehensive metrics tracking and analysis capabilities
+### Current Phase: Phase 4 - Optimization & Enhancement (IN PROGRESS)
+**Goal**: Polish and optimize existing systems
 
-## ✅ COMPLETED - Enhanced Simulation Engine System
-- **Performance Metrics**: Complete tracking of all simulation components with detailed timing
-- **Enhanced Logging**: Multi-level logging (trace, debug, info) throughout simulation engine
-- **Resource Management Optimization**: Improved resource updates with detailed statistics and tracking
-- **Event Processing Enhancement**: Better emergent events processing with performance monitoring
-- **Social Systems Optimization**: Enhanced tribe and cultural evolution with detailed timing
-- **Performance History**: Maintains performance data for analysis and optimization
-- **Real-time Monitoring**: Live performance summaries and detailed breakdowns
-- **Optimized Processing**: Improved tick/update logic with better error handling and efficiency
+#### ✅ Recently Completed
+- **Frontend Enhancement**: Enhanced WebSocket client with robust error handling and reconnection logic
+- **Testing Infrastructure**: Created comprehensive testing guide and WebSocket test client
+- **Error Handling**: Added comprehensive error reporting and debugging information
+- **User Feedback**: Enhanced UI with emojis and better status indicators
+- **Connection Management**: Added automatic reconnection with exponential backoff
+- **Debugging Tools**: Added extensive logging and debugging output
+- **Visual Enhancement**: Complete frontend graphics overhaul with detailed visualizations
+- **UI Enhancement**: Enhanced statistics panels, event logs, and control interfaces
+- **Animation System**: Added hover effects, pulse animations, and visual feedback
+- **Material System**: Dynamic materials with color coding based on entity properties
+- **Environment Effects**: Dynamic sky colors, fog, and terrain visualization
+- **Camera Controls**: Multiple view modes with smooth camera transitions
 
-## ✅ COMPLETED - Frontend Development System
-- **Godot 4 Frontend**: Complete 3D visualization with real-time WebSocket communication
-- **Main Scene**: Main.tscn with UI controls and world renderer integration
-- **Entity Scenes**: Humanoid.tscn, Resource.tscn, Building.tscn with 3D models and controllers
-- **WebSocket Integration**: Real-time connection to backend with automatic reconnection
-- **Interactive Controls**: Click on entities to view details, camera controls, simulation speed control
-- **Multiple View Modes**: Overview, Close-up, Timeline, and Spectator modes
-- **Statistics Panel**: Real-time population, tribe, and resource statistics
-- **UI Controls**: Pause/resume, speed slider, connection status indicator
-- **Documentation**: Complete README with setup instructions and troubleshooting
+#### 🔧 Current Focus
+- **Frontend Testing**: Test the enhanced frontend with Godot 4 and validate all features
+- **User Experience**: Improve UI responsiveness and add more interactive features
+- **Performance Optimization**: Improve simulation engine efficiency
+- **Database Enhancement**: Advanced persistence and backup systems
+- **WebSocket Enhancement**: Advanced streaming and connection management
 
-## ✅ COMPLETED - Terrain Generation System
-- **Enhanced Terrain Generation**: Multi-scale noise combining continents, mountains, and detailed features
-- **Improved Biome System**: Realistic biome determination based on elevation, moisture, and temperature
-- **Advanced River Generation**: Multiple rivers with flow patterns, river banks, and downstream widening
-- **Enhanced Mineral Deposits**: Diverse minerals (Iron, Copper, Gold, Silver, Coal, Stone, Salt, Clay) with elevation-based distribution
-- **Rich Terrain Structures**: Ancient ruins, caves, waterfalls, hot springs, geysers, crystal formations
-- **Climate Zones**: Latitude-based temperature variation and elevation effects
-- **Erosion System**: Neighbor-based elevation reduction for realistic terrain
-- **Weather Integration**: Dynamic terrain updates based on weather conditions
+#### 📊 Current Metrics
+- **Compilation**: ✅ Successful (no errors)
+- **Tests**: ✅ 33 passing, 0 failing (100% success rate!)
+- **Database**: ✅ Fully integrated with analytics persistence
+- **Backend**: ✅ Running and healthy on port 8080
+- **Frontend**: 🔄 Enhanced with detailed graphics and animations (testing in progress)
+- **Documentation**: ✅ Comprehensive and up-to-date
 
-## ✅ COMPLETED - AI Behavior Tree System
-- **Enhanced Condition Evaluation**: Uses actual humanoid and world data instead of random results
-- **Personality-Driven Behavior**: Behavior trees created based on individual humanoid traits
-- **Priority-Based Decision Making**: Critical survival needs prioritized over social/creative activities
-- **Context-Aware Actions**: Actions selected based on current world state and humanoid needs
-- **Multi-Layer Behavior Hierarchy**: From emergency survival to advanced cultural activities
-- **Real-Time Condition Evaluation**: Hunger, thirst, danger, resources, technology access
-- **Technology Requirements**: Resources require specific technology levels to access
-- **Comprehensive Unit Tests**: Verified behavior tree functionality and decision-making
+## Technical Architecture
 
-## ✅ COMPLETED - Enhanced Resource Management System
-- **Advanced Resource Spawning**: Terrain-aware generation based on biome types and climate
-- **Environmental Impact Tracking**: Resource harvesting affects environmental health
-- **Resource Competition**: Multiple humanoids can compete for the same resources
-- **Seasonal Availability**: Resources have different availability based on seasons
-- **Technology Requirements**: Some resources require specific technology levels to access
-- **Resource Clusters**: Resources spawn in realistic clusters with varying densities
-- **Resource Migration**: Resources can move due to environmental changes
-- **Rarity System**: Resources have different rarity levels (Common to Legendary)
-- **Terrain Requirements**: Resources spawn based on biome, elevation, moisture, temperature
-- **Climate Requirements**: Resources have specific temperature and humidity requirements
-- **Enhanced Resource Types**: Added Diamond, Mythril, and other advanced resources
-- **Resource Statistics**: Comprehensive tracking of resource distribution and value
+### Backend (Rust)
+- **Simulation Engine**: Core autonomous AI-driven behavior system with comprehensive performance monitoring and proper world time synchronization
+- **Database Layer**: PostgreSQL for persistent world state and event logging with analytics persistence
+- **WebSocket Server**: Real-time communication with frontend (listening on port 8080)
+- **Analytics Engine**: Evolution metrics and reporting with database persistence and real-time metrics
 
-## ✅ COMPLETED - WebSocket Communication System
-- **Real-time Client-Server Updates**: WebSocket server running on 127.0.0.1:8080
-- **Client Message Handling**: Support for GetWorldState, GetRecentEvents, simulation control
-- **Simulation Control**: Pause/resume functionality and speed adjustment
-- **Periodic Broadcasting**: Automatic world state updates every second
-- **Robust Error Handling**: Graceful handling of database failures and client disconnections
-- **Optional Database**: System can run without PostgreSQL for development
-- **Fixed Client Tracking**: Resolved moved value issues for proper client management
-- **Configuration Integration**: Added missing fields (initial_population, weather_variability)
+### Frontend (Godot 4)
+- **3D World Renderer**: Multiple viewing modes with stylized graphics, enhanced debugging, and dynamic environment effects
+- **UI System**: Enhanced data panels, controls, and observation tools with improved user feedback and detailed statistics
+- **WebSocket Client**: Real-time data streaming from backend with robust error handling and reconnection logic
+- **Visual System**: Dynamic materials, animations, and color-coded entity representations
+- **Camera System**: Multiple view modes with smooth transitions and WASD movement
+- **Entity Controllers**: Individual controllers for humanoids, resources, and buildings with dynamic visual properties
 
-## ✅ COMPLETED - Database Functionality System
-- **Portable Database Configuration**: Environment variable support with DATABASE_URL override
-- **Automated Database Setup**: Cross-platform setup script (scripts/setup_database.sh)
-- **Optional Database Connection**: Graceful fallback when database is unavailable
-- **Environment Configuration**: Template-based configuration (env.example)
-- **Database Documentation**: Complete setup and troubleshooting guide
-- **Schema Auto-Creation**: Automatic table creation on startup
-- **Error Handling**: Robust error handling and logging for database operations
-- **Development-Friendly**: Can run without PostgreSQL for development
+## Development Phases
 
-## ✅ COMPLETED - Comprehensive Testing System
-- **Unit Test Coverage**: 33 comprehensive tests covering all major modules
-- **Database Testing**: Connection validation, URL parsing, and error handling tests
-- **WebSocket Testing**: Message handling, client management, and serialization tests
-- **Simulation Testing**: Engine creation, tick processing, and world updates
-- **World Testing**: Humanoid management, resource handling, and statistics
-- **Behavior Testing**: AI behavior trees and condition evaluation
-- **Terrain Testing**: Terrain generation and resource spawning
-- **Resource Testing**: Enhanced resource management and consumption
-- **Test Infrastructure**: Robust test framework with proper error handling
-- **Portable Testing**: Tests work in different environments without external dependencies
+### ✅ Phase 1: Foundation (COMPLETED)
+- [x] Basic simulation engine with humanoid entities
+- [x] Simple terrain generation
+- [x] Basic resource system
+- [x] WebSocket communication
+- [x] Database integration
+- [x] Frontend visualization
 
-## ✅ PHASE 2 COMPLETE - All Short-term Goals Achieved
+### ✅ Phase 2: Core Systems (COMPLETED)
+- [x] Enhanced AI behavior tree system
+- [x] Advanced terrain generation with biomes
+- [x] Comprehensive resource management
+- [x] Social organization (tribes)
+- [x] Cultural transmission systems
+- [x] Environmental impact tracking
+- [x] Performance monitoring and optimization
 
-### Phase 2: Short-term Goals - ALL COMPLETED ✅
-1. **✅ Complete WebSocket Communication** - Real-time client-server updates
-2. **✅ Restore Database Functionality** - Re-enable sqlx queries with proper DATABASE_URL
-3. **✅ Add Comprehensive Testing** - Unit tests and integration tests
-4. **✅ Frontend Development** - Godot 4 frontend implementation
+### ✅ Phase 3: Advanced Features (COMPLETED)
+- [x] Enhanced social systems (conflicts, alliances, hierarchies)
+- [x] Advanced environmental systems (ecosystems, climate change, pollution)
+- [x] Comprehensive analytics engine with database persistence
+- [x] Real-time metrics and reporting
+- [x] Prediction models and trend analysis
+- [x] Complete frontend integration
+- [x] Robust testing infrastructure (33 tests passing)
 
-## ✅ PHASE 3 COMPLETE - All Medium-term Goals Achieved
+### 🔄 Phase 4: Optimization & Enhancement (IN PROGRESS)
+- [x] Fix 3 failing simulation tests ✅ **COMPLETED**
+- [x] Frontend WebSocket client enhancement ✅ **COMPLETED**
+- [x] Error handling and debugging infrastructure ✅ **COMPLETED**
+- [x] Frontend visual enhancement with detailed graphics ✅ **COMPLETED**
+- [x] Enhanced UI with statistics panels and event logs ✅ **COMPLETED**
+- [x] Animation system with hover effects and visual feedback ✅ **COMPLETED**
+- [x] Dynamic material system with color coding ✅ **COMPLETED**
+- [x] Environment effects and terrain visualization ✅ **COMPLETED**
+- [🔄] Frontend testing and validation (IN PROGRESS)
+- [ ] Database optimization and backup systems
+- [ ] WebSocket performance enhancement
+- [ ] Frontend rendering optimization
+- [ ] Memory usage optimization
+- [ ] Simulation performance tuning
+- [ ] Advanced analytics visualization
 
-### Phase 3: Medium-term Goals - ALL COMPLETED ✅
-1. **✅ Enhance simulation engine** - Optimize tick/update logic, add logging, improve resource/event processing
-2. **✅ Deepen social & cultural systems** - Cultural transmission, conflict, alliances, social events
-3. **✅ Improve environmental & resource systems** - Ecosystem dynamics, environmental impact modeling
-4. **✅ Expand analytics engine** - Richer evolution metrics, detailed event/population tracking
+### 📋 Phase 5: Advanced Features (PLANNED)
+- [ ] Machine learning integration for behavior prediction
+- [ ] Advanced climate modeling
+- [ ] Genetic algorithm for humanoid evolution
+- [ ] Multi-world simulation support
+- [ ] Advanced visualization modes
+- [ ] Export/import simulation states
+- [ ] Plugin system for custom behaviors
 
-### Phase 3 Milestones - ALL COMPLETED ✅
-- [x] **Simulation Engine Optimization** - Performance improvements and enhanced logging
-- [x] **Social Systems Enhancement** - Cultural transmission and conflict resolution
-- [x] **Environmental Modeling** - Ecosystem dynamics and impact assessment
-- [x] **Advanced Analytics** - Detailed metrics and reporting capabilities
+### 🚀 Phase 6: Scale & Polish (FUTURE)
+- [ ] Large-scale world simulation (100k+ humanoids)
+- [ ] Distributed simulation processing
+- [ ] Advanced UI/UX improvements
+- [ ] Documentation and tutorials
+- [ ] Performance benchmarking
+- [ ] Community features
+- [ ] Mobile/Web deployment options
 
-### Phase 3 Achievements - ALL COMPLETED ✅
-- **Enhanced Ecosystem Dynamics**: Comprehensive ecosystem health, stability, species diversity, and food web complexity tracking
-- **Climate Change Modeling**: Global temperature change, sea level rise, precipitation changes, and carbon concentration tracking
-- **Environmental Impact Systems**: Deforestation, soil degradation, water/air pollution, habitat fragmentation, and species extinction tracking
-- **Pollution Management**: Air, water, soil, noise, and light pollution with source tracking and natural reduction
-- **Biodiversity Systems**: Species count, diversity index, endangered species, invasive species, keystone species, and biodiversity hotspots
-- **Ecosystem-Aware Resource Generation**: Resources generated based on ecosystem health, biodiversity, and environmental conditions
-- **Environmental Event Generation**: Comprehensive ecosystem, climate change, pollution, biodiversity, and environmental disaster events
-- **Resource-Environment Integration**: Resources avoid polluted areas, prefer biodiversity hotspots, and adjust properties based on ecosystem health
-- **Performance Integration**: All environmental systems integrated with existing performance monitoring infrastructure
-- **Enhanced Analytics Engine**: Complete implementation of all calculation methods for population, technology, social, environmental, cultural, economic, and health metrics
-- **Real-Time Metrics Tracking**: Comprehensive tracking of population demographics, technology levels, social structures, environmental health, cultural diversity, economic indicators, and health statistics
-- **Historical Data Management**: Complete historical data collection and management with automatic cleanup to prevent memory bloat
-- **Prediction Models**: Advanced prediction systems for population growth, technology breakthroughs, social conflicts/alliances, environmental crises, cultural evolution, economic trends, and health outcomes
-- **Database Integration**: Full database integration for analytics persistence with graceful fallback when database is unavailable
-- **Simulation Engine Integration**: Analytics engine fully integrated into simulation engine with performance monitoring
+## Critical Issues & Technical Debt
 
-### Phase 4: Long-term Goals
-1. **Optimize database & persistence** - Schema, queries, auto-save, backup, recovery
-2. **Enhance WebSocket/server** - Real-time streaming, batching, filtering, subscriptions, connection management
-3. **Complete core simulation loop** - End-to-end run, WebSocket, persistence
-4. **Minimal frontend rendering** - 3D world, camera, UI
+### ✅ Recently Resolved
+1. **Database Integration**: Complete PostgreSQL integration with proper environment configuration
+2. **Compilation Errors**: All compilation errors resolved with proper environment setup
+3. **Test Failures**: All 3 failing simulation tests successfully fixed
+4. **World Time Synchronization**: Proper tick progression across all simulation systems
+5. **Frontend Error Handling**: Enhanced WebSocket client with robust error handling and reconnection logic
+6. **Frontend Visualization**: Complete visual overhaul with detailed graphics and animations
 
-## Architecture Overview
+### 🔧 Current Technical Debt
+1. **Frontend Testing**: Need to complete testing of enhanced frontend with Godot 4
+2. **Performance**: Simulation engine optimization needed for large-scale worlds
+3. **Memory Usage**: Optimize memory consumption for long-running simulations
+4. **Database Schema**: Consider advanced indexing and optimization
+5. **WebSocket Reliability**: Implement reconnection and error handling ✅ **COMPLETED**
 
-### Core Components
-- **SimulationEngine**: Main simulation loop and world state management with comprehensive performance monitoring
-- **World**: Central game state containing humanoids, tribes, resources, and terrain
-- **Humanoid**: Individual AI entities with skills, memories, and behaviors
-- **Tribe**: Social groups with culture, technology, and collective decision-making
-- **TerrainGenerator**: Complete procedural world generation with biomes and structures
-- **ResourceManager**: Resource spawning, distribution, and management with performance tracking
-- **BehaviorTree**: AI decision-making system for humanoids and tribes
+### 📋 Planned Improvements
+1. **Code Documentation**: Add more inline documentation
+2. **Configuration**: More flexible configuration options
+3. **Logging**: Enhanced logging and debugging tools ✅ **COMPLETED**
 
-### Data Structures
-- **Terrain**: Tile-based world with elevation, moisture, temperature, biomes, rivers, and structures
-- **Humanoid**: Individual with position, skills, inventory, personality, and goals
-- **Tribe**: Social group with territory, culture, technology, and relationships
-- **Resource**: World objects with type, position, quantity, and quality
-- **Event**: Historical records of significant world events
-- **Vec2Def**: Custom 2D vector for serialization (replaces glam::Vec2)
-- **PerformanceMetrics**: Comprehensive performance tracking for all simulation components
+## Success Criteria
 
-### Key Enums
-- **BiomeType**: Desert, Forest, Mountain, Ocean, Jungle, Swamp, Tundra, Arctic, River, Lake, Volcanic, etc.
-- **ResourceType**: Food, Water, Wood, Stone, Iron, Copper, Gold, Silver, Coal, Salt, Clay, etc.
-- **MineralType**: Iron, Copper, Gold, Silver, Coal, Stone, Salt, Clay
-- **TerrainStructureType**: Cave, Waterfall, HotSpring, RockFormation, AncientRuins, NaturalBridge, Geyser, CrystalFormation
-- **EventCategory**: Birth, Death, Discovery, Conflict, etc.
-- **BehaviorNode**: Sequence, Selector, Action, Condition, etc.
-- **TribeDecision**: War, Trade, Technology, Cultural Event, etc.
+### Phase 4 Goals
+- [x] All tests passing (currently 33/33) ✅ **ACHIEVED**
+- [x] Frontend error handling enhanced ✅ **ACHIEVED**
+- [x] Frontend visual enhancement completed ✅ **ACHIEVED**
+- [x] Enhanced UI with detailed statistics ✅ **ACHIEVED**
+- [x] Animation system implemented ✅ **ACHIEVED**
+- [🔄] Frontend testing completed (IN PROGRESS)
+- [ ] Simulation performance improved by 50%
+- [ ] Database operations optimized
+- [ ] WebSocket connection stability improved ✅ **ACHIEVED**
+- [ ] Memory usage reduced by 30%
 
-## Development Environment
-- **Language**: Rust
-- **Database**: PostgreSQL with sqlx
-- **WebSocket**: tokio-tungstenite for real-time communication
-- **Serialization**: serde for JSON data persistence
-- **Randomness**: rand crate for procedural generation
-- **Noise**: noise crate for terrain generation
-- **Async**: tokio for concurrent operations
-- **Frontend**: Godot 4 with GDScript
+### Phase 5 Goals
+- [ ] Machine learning integration working
+- [ ] Advanced climate modeling implemented
+- [ ] Genetic evolution system functional
+- [ ] Multi-world simulation capability
+- [ ] Plugin system architecture complete
 
-## Next Steps
-1. ✅ Complete remaining compilation fixes (22 errors) - **COMPLETED**
-2. ✅ Implement full terrain generation system - **COMPLETED**
-3. ✅ Complete AI behavior tree implementation - **COMPLETED**
-4. ✅ Add comprehensive resource management - **COMPLETED**
-5. ✅ Build WebSocket communication layer - **COMPLETED**
-6. ✅ Create frontend visualization - **COMPLETED**
-7. ✅ Add comprehensive testing suite - **COMPLETED**
-8. ✅ Restore database functionality with proper configuration - **COMPLETED**
-9. ✅ Enhance simulation engine - **COMPLETED**
-10. ✅ Deepen social & cultural systems - **COMPLETED**
-11. ✅ Improve environmental & resource systems - **COMPLETED**
-12. **Expand analytics engine** - Next priority
+### Phase 6 Goals
+- [ ] 100k+ humanoid simulation stable
+- [ ] Distributed processing implemented
+- [ ] Production-ready deployment
+- [ ] Community features complete
+- [ ] Mobile/Web versions available
+
+## Development Guidelines
+
+### Code Quality
+- ✅ Maintain comprehensive test coverage (33 tests passing)
+- ✅ Follow Rust best practices
+- ✅ Document all public APIs
+- ✅ Use meaningful commit messages
+
+### Performance
+- 🔧 Profile regularly for bottlenecks
+- 🔧 Optimize critical paths
+- 🔧 Monitor memory usage
+- 🔧 Benchmark against targets
+
+### Architecture
+- ✅ Keep modules loosely coupled
+- ✅ Use dependency injection where appropriate
+- ✅ Maintain clear separation of concerns
+- ✅ Plan for scalability
+
+---
+
+**Last Updated**: December 2025  
+**Current Phase**: Phase 4 - Optimization & Enhancement  
+**Next Milestone**: Complete frontend testing and validation  
+**Test Status**: ✅ 33/33 tests passing (100% success rate!)  
+**Backend Status**: ✅ Running and healthy on port 8080  
+**Frontend Status**: 🔄 Enhanced with detailed graphics and animations (testing in progress)

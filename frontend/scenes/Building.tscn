@@ -1,6 +1,6 @@
-[gd_scene load_steps=3 format=3 uid="uid://building_scene"]
+[gd_scene load_steps=3 format=3 uid="uid://cc8f3phjnpfhh"]
 
-[ext_resource type="Script" path="res://scripts/BuildingController.gd" id="1_building"]
+[ext_resource type="Script" uid="uid://7fnwiscojrua" path="res://scripts/BuildingController.gd" id="1_building"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_building"]
 size = Vector3(2, 1, 2)
