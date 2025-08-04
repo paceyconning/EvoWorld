@@ -35,15 +35,18 @@ EvoWorld is a **single-user, persistent simulation** where you act as a **passiv
 - **Data Persistence**: Robust database and auto-save for long-term simulation
 - **Performance Monitoring**: Comprehensive metrics tracking and real-time optimization
 
-### 🎨 Enhanced Visualization
-- **Dynamic Graphics**: Color-coded entities with age, health, and intelligence indicators
+### 🎨 Enhanced 3D Visualization
+- **Detailed 3D Graphics**: Enhanced materials, lighting, and visual effects with realistic depth
+- **Entity Visual Effects**: Health bars, auras, particle effects, and status indicators
+- **Terrain Decoration**: Scattered rocks, vegetation, and environmental details
+- **Post-Processing**: Vignette effects and enhanced visual quality
+- **Free Camera Mode**: Advanced camera controls with mouse look and WASD movement
 - **Animation System**: Hover effects, pulse animations, and visual feedback
 - **Material System**: Dynamic materials with metallic properties and emission effects
 - **Environment Effects**: Dynamic sky colors, fog, and terrain visualization
-- **Multiple View Modes**: Overview, close-up, timeline, and spectator modes
+- **Multiple View Modes**: Overview, close-up, timeline, spectator, and free camera modes
 - **Enhanced UI**: Detailed statistics panels, event logs, and control interfaces
 - **Entity Interaction**: Click selection, context menus, and detailed information panels
-- **Camera Controls**: Smooth transitions, WASD movement, and mouse controls
 - **Visual Feedback**: Selection highlighting, hover effects, and status indicators
 
 ## 🏗️ Architecture
@@ -55,12 +58,14 @@ EvoWorld is a **single-user, persistent simulation** where you act as a **passiv
 - **Analytics Engine**: Evolution metrics and reporting with database persistence
 
 ### Frontend (Godot 4)
-- **3D World Renderer**: Multiple viewing modes with stylized graphics and enhanced debugging
+- **3D World Renderer**: Multiple viewing modes with enhanced 3D graphics, detailed materials, and dynamic environment effects
 - **UI System**: Enhanced data panels, controls, and observation tools with detailed statistics
 - **WebSocket Client**: Real-time data streaming from backend with robust error handling and reconnection logic
-- **Visual System**: Dynamic materials, animations, and color-coded entity representations
-- **Camera System**: Multiple view modes with smooth transitions and WASD movement
-- **Entity Controllers**: Individual controllers for humanoids, resources, and buildings with dynamic visual properties
+- **Visual System**: Advanced materials, particle effects, health bars, auras, and status indicators
+- **Camera System**: Multiple view modes including free camera with mouse look and WASD movement
+- **Entity Controllers**: Enhanced controllers with detailed graphics, animations, and visual feedback
+- **Post-Processing**: Vignette effects and enhanced visual quality
+- **Terrain System**: Decorated terrain with scattered objects and environmental details
 - **Interaction System**: Entity selection, context menus, and detailed information panels
 - **Help System**: Keyboard shortcuts, tooltips, and comprehensive user guidance
 

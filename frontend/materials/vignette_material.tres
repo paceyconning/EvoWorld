@@ -1,0 +1,25 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[sub_resource type="Shader" id="Shader_vignette"]
+code = "shader_type canvas_item;
+
+uniform float vignette_intensity : hint_range(0.0, 1.0) = 0.3;
+uniform vec4 vignette_color : source_color = vec4(0.0, 0.0, 0.0, 1.0);
+
+void fragment() {
+	vec2 uv = UV;
+	vec2 center = vec2(0.5, 0.5);
+	float dist = distance(uv, center);
+	float vignette = smoothstep(0.5, 0.0, dist);
+	
+	vec4 color = texture(TEXTURE, UV);
+	vec4 vignette_effect = mix(color, vignette_color, vignette_intensity * (1.0 - vignette));
+	
+	COLOR = vignette_effect;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_vignette"]
+shader = SubResource("Shader_vignette")
+vignette_intensity = 0.2
+vignette_color = Color(0, 0, 0, 1) 
