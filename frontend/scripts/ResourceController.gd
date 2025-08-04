@@ -112,7 +112,7 @@ func update_visual_properties():
 	
 	# Update label with more detailed information
 	update_label()
-	
+
 	# Update lighting effects
 	update_lighting_effects()
 

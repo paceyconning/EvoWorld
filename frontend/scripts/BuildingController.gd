@@ -92,7 +92,7 @@ func update_visual_properties():
 	
 	# Update label with more detailed information
 	update_label()
-	
+
 	# Update lighting effects
 	update_lighting_effects()
 
@@ -101,12 +101,12 @@ func update_building_type_color():
 		var building_type = building_data.type
 		
 		# Enhanced color coding for different building types
-		match building_type:
-			"house":
+	match building_type:
+		"house":
 				building_type_color = Color(0.8, 0.6, 0.4, 1.0)  # Brown
-			"workshop":
+		"workshop":
 				building_type_color = Color(0.6, 0.4, 0.8, 1.0)  # Purple
-			"temple":
+		"temple":
 				building_type_color = Color(1.0, 0.8, 0.2, 1.0)  # Gold
 			"storage":
 				building_type_color = Color(0.4, 0.6, 0.8, 1.0)  # Blue
@@ -208,7 +208,7 @@ func create_construction_particles():
 func set_building_data(data: Dictionary):
 	building_data = data
 	update_visual_properties()
-
+	
 func set_selected(selected: bool):
 	is_selected = selected
 	if selected:

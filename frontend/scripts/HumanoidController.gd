@@ -15,7 +15,7 @@ var tribe_color: Color
 
 # Enhanced visual components
 var aura_light: OmniLight3D
-var health_bar: ProgressBar3D
+var health_bar: Control
 var status_effects: Array = []
 
 func _ready():
@@ -61,15 +61,18 @@ func setup_visual_components():
 	# Setup health bar
 	health_bar = $HealthBar
 	if health_bar:
-		health_bar.value = 100.0
-		health_bar.max_value = 100.0
-		health_bar.fill_mode = ProgressBar3D.FILL_MODE_LEFT_TO_RIGHT
-		health_bar.fill_color = Color(0, 1, 0, 1)
+		# Health bar will be implemented as a 3D sprite or mesh
+		pass
 
 func _process(delta):
 	update_animation(delta)
 	update_visual_properties()
 	update_status_effects(delta)
+	
+	# Add subtle hover animation
+	if not is_selected:
+		var hover_offset = sin(Time.get_ticks_msec() * 0.002) * 0.1
+		position.y = 1.0 + hover_offset
 
 func update_animation(delta):
 	animation_timer += delta * 2.0  # Animation speed
@@ -171,15 +174,8 @@ func update_label():
 func update_health_bar():
 	if health_bar and humanoid_data.has("health"):
 		var health = humanoid_data.health
-		health_bar.value = health
-		
-		# Update health bar color based on health level
-		if health > 70:
-			health_bar.fill_color = Color.GREEN
-		elif health > 40:
-			health_bar.fill_color = Color.YELLOW
-		else:
-			health_bar.fill_color = Color.RED
+		# Health bar will be implemented as a 3D sprite or mesh
+		pass
 
 func update_aura_effects():
 	if aura_light:
@@ -187,16 +183,16 @@ func update_aura_effects():
 		var health = humanoid_data.get("health", 100)
 		var health_ratio = health / 100.0
 		
-		# Adjust aura intensity based on health
-		aura_light.light_energy = 0.3 * health_ratio
+		# Adjust aura intensity based on health (increased brightness)
+		aura_light.light_energy = 0.6 * health_ratio + 0.2
 		
 		# Adjust aura color based on status
 		if health_ratio < 0.3:
-			aura_light.light_color = Color.RED
+			aura_light.light_color = Color(1.0, 0.3, 0.3, 1.0)  # Bright red
 		elif health_ratio < 0.7:
-			aura_light.light_color = Color.YELLOW
+			aura_light.light_color = Color(1.0, 0.8, 0.3, 1.0)  # Bright yellow
 		else:
-			aura_light.light_color = Color(0.8, 0.6, 0.4, 1.0)
+			aura_light.light_color = Color(0.9, 0.7, 0.5, 1.0)  # Warm orange
 
 func update_status_effects(delta):
 	# Update any active status effects
@@ -265,18 +261,18 @@ func create_healing_effect():
 	# Create green healing particles
 	var healing_particles = GPUParticles3D.new()
 	healing_particles.name = "HealingParticles"
-	healing_particles.amount = 10
-	healing_particles.lifetime = 1.0
+	healing_particles.amount = 20  # Increased particles
+	healing_particles.lifetime = 1.5  # Longer lifetime
 	
 	var healing_material = ParticleProcessMaterial.new()
 	healing_material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	healing_material.emission_sphere_radius = 0.5
-	healing_material.gravity = Vector3(0, 2, 0)
-	healing_material.initial_velocity_min = 1.0
-	healing_material.initial_velocity_max = 2.0
-	healing_material.scale_min = 0.1
-	healing_material.scale_max = 0.3
-	healing_material.color = Color(0, 1, 0, 0.8)
+	healing_material.emission_sphere_radius = 0.8  # Larger emission area
+	healing_material.gravity = Vector3(0, 3, 0)  # Stronger upward force
+	healing_material.initial_velocity_min = 2.0  # Faster particles
+	healing_material.initial_velocity_max = 4.0
+	healing_material.scale_min = 0.2  # Larger particles
+	healing_material.scale_max = 0.5
+	healing_material.color = Color(0, 1, 0, 1.0)  # Fully opaque
 	
 	healing_particles.process_material = healing_material
 	add_child(healing_particles)
@@ -285,18 +281,18 @@ func create_damage_effect():
 	# Create red damage particles
 	var damage_particles = GPUParticles3D.new()
 	damage_particles.name = "DamageParticles"
-	damage_particles.amount = 15
-	damage_particles.lifetime = 0.8
+	damage_particles.amount = 25  # More particles
+	damage_particles.lifetime = 1.2  # Longer lifetime
 	
 	var damage_material = ParticleProcessMaterial.new()
 	damage_material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	damage_material.emission_sphere_radius = 0.3
-	damage_material.gravity = Vector3(0, -1, 0)
-	damage_material.initial_velocity_min = 2.0
-	damage_material.initial_velocity_max = 4.0
-	damage_material.scale_min = 0.1
-	damage_material.scale_max = 0.2
-	damage_material.color = Color(1, 0, 0, 0.9)
+	damage_material.emission_sphere_radius = 0.6  # Larger emission area
+	damage_material.gravity = Vector3(0, -2, 0)  # Stronger downward force
+	damage_material.initial_velocity_min = 3.0  # Faster particles
+	damage_material.initial_velocity_max = 6.0
+	damage_material.scale_min = 0.2  # Larger particles
+	damage_material.scale_max = 0.4
+	damage_material.color = Color(1, 0, 0, 1.0)  # Fully opaque
 	
 	damage_particles.process_material = damage_material
 	add_child(damage_particles)

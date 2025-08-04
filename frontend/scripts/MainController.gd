@@ -309,9 +309,23 @@ func _on_play_pause_pressed():
 		print("▶️ Simulation resumed")
 
 func update_world_display():
-	if world_renderer:
-		world_renderer.update_world(current_world_data)
-		print("🎨 World display updated")
+	if world_renderer and current_world_data.has("humanoids"):
+		print("🎨 Updating world display with ", current_world_data.humanoids.size(), " humanoids")
+		
+		# Clear existing entities
+		world_renderer.clear_entities()
+		
+		# Update entities with new data
+		if current_world_data.has("humanoids"):
+			world_renderer.update_humanoids(current_world_data.humanoids)
+		
+		if current_world_data.has("resources"):
+			world_renderer.update_resources(current_world_data.resources)
+		
+		if current_world_data.has("buildings"):
+			world_renderer.update_buildings(current_world_data.buildings)
+		
+		print("✅ World display updated successfully")
 
 func update_statistics():
 	# Update basic statistics

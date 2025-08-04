@@ -44,7 +44,6 @@ func _ready():
 	setup_terrain()
 	setup_ui()
 	setup_selection_system()
-	setup_post_processing()
 	print("🎨 Enhanced WorldRenderer initialized")
 
 func setup_lighting():
@@ -59,8 +58,8 @@ func setup_lighting():
 	# Add main directional light with shadows
 	var main_light = DirectionalLight3D.new()
 	main_light.name = "MainLight"
-	main_light.light_energy = 1.2
-	main_light.light_color = Color(1.0, 0.95, 0.9, 1.0)
+	main_light.light_energy = 1.8  # Increased brightness
+	main_light.light_color = Color(1.0, 0.98, 0.9, 1.0)  # Warmer light
 	main_light.rotation_degrees = Vector3(-45, 45, 0)
 	main_light.shadow_enabled = true
 	main_light.directional_shadow_max_distance = 100.0
@@ -72,8 +71,8 @@ func setup_lighting():
 	# Add fill light for better illumination
 	var fill_light = DirectionalLight3D.new()
 	fill_light.name = "FillLight"
-	fill_light.light_energy = 0.3
-	fill_light.light_color = Color(0.8, 0.9, 1.0, 1.0)
+	fill_light.light_energy = 0.6  # Increased fill light
+	fill_light.light_color = Color(0.9, 0.95, 1.0, 1.0)  # Brighter fill
 	fill_light.rotation_degrees = Vector3(-30, -45, 0)
 	add_child(fill_light)
 	
@@ -81,12 +80,12 @@ func setup_lighting():
 	for i in range(4):
 		var point_light = OmniLight3D.new()
 		point_light.name = "AtmosphericLight" + str(i)
-		point_light.light_energy = 0.2
-		point_light.light_color = Color(1.0, 0.8, 0.6, 1.0)
-		point_light.light_range = 20.0
+		point_light.light_energy = 0.4  # Increased point light energy
+		point_light.light_color = Color(1.0, 0.9, 0.7, 1.0)  # Warmer point lights
+		point_light.omni_range = 25.0  # Increased range
 		point_light.position = Vector3(
 			randf_range(-40, 40),
-			5,
+			8,  # Raised height
 			randf_range(-40, 40)
 		)
 		add_child(point_light)
@@ -103,16 +102,16 @@ func setup_camera():
 	# Set initial camera position based on view mode
 	match view_mode:
 		ViewMode.OVERVIEW:
-			camera.position = Vector3(0, 80, 0)
-			camera.rotation_degrees = Vector3(-90, 0, 0)
+			camera.position = Vector3(0, 50, 50)
+			camera.rotation_degrees = Vector3(-45, 0, 0)
 		ViewMode.CLOSE_UP:
-			camera.position = Vector3(0, 15, 25)
+			camera.position = Vector3(0, 10, 20)
 			camera.look_at(Vector3.ZERO)
 		ViewMode.SPECTATOR:
-			camera.position = Vector3(0, 25, 35)
+			camera.position = Vector3(0, 20, 30)
 			camera.look_at(Vector3.ZERO)
 		ViewMode.FREE_CAMERA:
-			camera.position = Vector3(0, 30, 30)
+			camera.position = Vector3(0, 25, 25)
 			camera.look_at(Vector3.ZERO)
 	
 	print("📷 Enhanced camera setup complete at position: ", camera.position)
@@ -125,18 +124,18 @@ func setup_environment():
 	# Create enhanced environment settings
 	var env_settings = Environment.new()
 	env_settings.background_mode = Environment.BG_COLOR
-	env_settings.background_color = Color(0.4, 0.6, 0.8, 1.0)
+	env_settings.background_color = Color(0.7, 0.8, 0.9, 1.0)  # Lighter sky blue
 	env_settings.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env_settings.ambient_light_color = Color(0.6, 0.7, 0.8, 1.0)
-	env_settings.ambient_light_energy = 0.4
+	env_settings.ambient_light_color = Color(0.8, 0.8, 0.9, 1.0)  # Brighter ambient
+	env_settings.ambient_light_energy = 0.6  # Increased ambient light
 	
 	# Enhanced fog for depth and atmosphere
 	env_settings.fog_enabled = true
-	env_settings.fog_light_color = Color(0.4, 0.6, 0.8, 1.0)
-	env_settings.fog_density = 0.008
-	env_settings.fog_sky_affect = 0.3
-	env_settings.fog_height = 10.0
-	env_settings.fog_height_density = 0.5
+	env_settings.fog_light_color = Color(0.7, 0.8, 0.9, 1.0)  # Lighter fog
+	env_settings.fog_density = 0.005  # Reduced fog density
+	env_settings.fog_sky_affect = 0.2
+	env_settings.fog_height = 15.0
+	env_settings.fog_height_density = 0.3
 	
 	# Add subtle bloom effect
 	env_settings.glow_enabled = true
@@ -161,15 +160,15 @@ func setup_terrain():
 	
 	# Create enhanced terrain material with texture
 	var terrain_material = StandardMaterial3D.new()
-	terrain_material.albedo_color = Color(0.3, 0.6, 0.3, 1.0)
-	terrain_material.roughness = 0.8
+	terrain_material.albedo_color = Color(0.4, 0.7, 0.4, 1.0)  # Brighter green
+	terrain_material.roughness = 0.7
 	terrain_material.metallic = 0.0
 	terrain_material.normal_enabled = true
 	
 	# Add subtle emission for grass effect
 	terrain_material.emission_enabled = true
-	terrain_material.emission = Color(0.2, 0.4, 0.2, 1.0)
-	terrain_material.emission_energy_multiplier = 0.1
+	terrain_material.emission = Color(0.3, 0.5, 0.3, 1.0)  # Brighter emission
+	terrain_material.emission_energy_multiplier = 0.2  # Increased emission
 	
 	terrain_mesh.material_override = terrain_material
 	add_child(terrain_mesh)
@@ -222,18 +221,7 @@ func setup_terrain_decorations():
 		
 		add_child(decoration)
 
-func setup_post_processing():
-	"""Add post-processing effects for better visual quality"""
-	# Add a subtle vignette effect
-	var vignette = ColorRect.new()
-	vignette.name = "Vignette"
-	vignette.color = Color(0, 0, 0, 0.1)
-	vignette.material = preload("res://materials/vignette_material.tres")
-	
-	# Add to camera
-	camera.add_child(vignette)
-	
-	print("🎨 Post-processing setup complete")
+# Post-processing setup removed for now
 
 func setup_ui():
 	# Create UI elements for different view modes
@@ -453,22 +441,22 @@ func set_view_mode(mode: ViewMode):
 	
 	match mode:
 		ViewMode.OVERVIEW:
-			camera.position = Vector3(0, 80, 0)
-			camera.rotation_degrees = Vector3(-90, 0, 0)
+			camera.position = Vector3(0, 50, 50)
+			camera.rotation_degrees = Vector3(-45, 0, 0)
 			print("🔍 Switched to Overview mode")
 		ViewMode.CLOSE_UP:
-			camera.position = Vector3(0, 15, 25)
+			camera.position = Vector3(0, 10, 20)
 			camera.look_at(Vector3.ZERO)
 			print("👁️ Switched to Close Up mode")
 		ViewMode.TIMELINE:
 			show_timeline_view()
 			print("📊 Switched to Timeline mode")
 		ViewMode.SPECTATOR:
-			camera.position = Vector3(0, 25, 35)
+			camera.position = Vector3(0, 20, 30)
 			camera.look_at(Vector3.ZERO)
 			print("🎮 Switched to Spectator mode")
 		ViewMode.FREE_CAMERA:
-			camera.position = Vector3(0, 30, 30)
+			camera.position = Vector3(0, 25, 25)
 			camera.look_at(Vector3.ZERO)
 			print("👾 Switched to Free Camera mode")
 
@@ -610,19 +598,19 @@ func update_humanoids(humanoids_data: Array):
 		# Set position from Vec2Def format
 		if humanoid_data.has("position"):
 			var pos = humanoid_data.position
-			humanoid.position = Vector3(pos.x, 0, pos.y)
+			humanoid.position = Vector3(pos.x, 1, pos.y)  # Y=1 to place above ground
 			print("📍 Humanoid ", humanoid_id, " at position: ", humanoid.position)
 		else:
 			# Place humanoids in a grid if no position data
 			var grid_size = 10
 			var x = (i % grid_size) * 5.0
 			var z = (i / grid_size) * 5.0
-			humanoid.position = Vector3(x, 0, z)
+			humanoid.position = Vector3(x, 1, z)
 			print("📍 Humanoid ", humanoid_id, " placed at grid position: ", humanoid.position)
 		
 		# Set properties
-			if humanoid.has_method("set_humanoid_data"):
-		humanoid.set_humanoid_data(humanoid_data)
+		if humanoid.has_method("set_humanoid_data"):
+			humanoid.set_humanoid_data(humanoid_data)
 		
 		add_child(humanoid)
 		humanoid_instances.append(humanoid)
@@ -638,17 +626,17 @@ func update_resources(resources_data: Array):
 		# Set position
 		if resource_data.has("position"):
 			var pos = resource_data.position
-			resource.position = Vector3(pos.x, 0, pos.y)
+			resource.position = Vector3(pos.x, 0.5, pos.y)  # Y=0.5 to place on ground
 		else:
 			# Place resources in a different grid pattern
 			var grid_size = 8
 			var x = (i % grid_size) * 8.0 - 20.0
 			var z = (i / grid_size) * 8.0 - 20.0
-			resource.position = Vector3(x, 0, z)
+			resource.position = Vector3(x, 0.5, z)
 		
 		# Set properties
-			if resource.has_method("set_resource_data"):
-		resource.set_resource_data(resource_data)
+		if resource.has_method("set_resource_data"):
+			resource.set_resource_data(resource_data)
 		
 		add_child(resource)
 		resource_instances.append(resource)
@@ -664,7 +652,7 @@ func update_buildings(buildings_data: Array):
 		# Set position
 		if building_data.has("position"):
 			var pos = building_data.position
-			building.position = Vector3(pos.x, 0, pos.y)
+			building.position = Vector3(pos.x, 0, pos.y)  # Y=0 for buildings on ground
 		else:
 			# Place buildings in a different pattern
 			var x = (i % 5) * 15.0 - 30.0
@@ -672,8 +660,8 @@ func update_buildings(buildings_data: Array):
 			building.position = Vector3(x, 0, z)
 		
 		# Set properties
-			if building.has_method("set_building_data"):
-		building.set_building_data(building_data)
+		if building.has_method("set_building_data"):
+			building.set_building_data(building_data)
 		
 		add_child(building)
 		building_instances.append(building)
@@ -710,6 +698,30 @@ func get_selected_entity() -> Node3D:
 
 func get_hovered_entity() -> Node3D:
 	return hovered_entity
+
+func clear_entities():
+	"""Clear all existing entities"""
+	print("🧹 Clearing existing entities...")
+	
+	# Remove humanoids
+	for humanoid in humanoid_instances:
+		if is_instance_valid(humanoid):
+			humanoid.queue_free()
+	humanoid_instances.clear()
+	
+	# Remove resources
+	for resource in resource_instances:
+		if is_instance_valid(resource):
+			resource.queue_free()
+	resource_instances.clear()
+	
+	# Remove buildings
+	for building in building_instances:
+		if is_instance_valid(building):
+			building.queue_free()
+	building_instances.clear()
+	
+	print("✅ All entities cleared")
 
 func clear_selection():
 	"""Clear current entity selection"""
